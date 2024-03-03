@@ -1,3 +1,4 @@
 discord
+discord.py[voice]
 python-dotenv
 yt_dlp

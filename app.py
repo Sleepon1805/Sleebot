@@ -4,11 +4,11 @@ from dotenv import load_dotenv
 import discord
 from discord.ext import commands
 
-from music import Music
 from basic import Basic
+from music import Music
 
 
-def run_discord_bot():
+async def run_discord_bot():
     intents = discord.Intents.default()
     intents.message_content = True
 
@@ -22,26 +22,27 @@ def run_discord_bot():
         print('Servers connected to:')
         for guild in bot.guilds:
             print(f"{guild.name} (ID: {guild.id})")
+        print('------')
 
-        await bot.change_presence(status=discord.Status.online, activity=discord.Game(name=" Music, type !help "))
+        # await bot.change_presence(status=discord.Status.online, activity=discord.Game(name=" Music, type !help "))
+
+    @bot.event
+    async def on_guild_join(guild):
+        print(f"Joined guild {guild.name}")
 
     @bot.event
     async def on_command_error(ctx, error):
+        print(error)
         await ctx.send(error)
 
-    return bot
-
-
-async def main():
     load_dotenv()
-    DISCORD_TOKEN = os.getenv("discord_token")
-
-    bot = run_discord_bot()
-
+    DISCORD_TOKEN = os.getenv("DISCORD_TOKEN")
     async with bot:
         await bot.add_cog(Basic(bot))
         await bot.add_cog(Music(bot))
         await bot.start(DISCORD_TOKEN)
 
+    return bot
+
 if __name__ == "__main__":
-    asyncio.run(main())
+    asyncio.run(run_discord_bot())

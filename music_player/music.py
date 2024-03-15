@@ -29,7 +29,7 @@ class Music(Cog):
 
         queue = player.get_queue_items()
         for source in queue:
-            source.empty_cache()
+            source.delete_cache()
 
         try:
             del self.players[guild.id]

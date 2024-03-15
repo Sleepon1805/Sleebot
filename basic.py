@@ -49,12 +49,10 @@ class Basic(commands.Cog):
 
     @commands.command(
         name='raise_exception',
-        alias=['raise'],
+        aliases=['raise'],
         brief="Prints and raises an exception",
     )
-    async def raise_exception(self, ctx, e: str = None):
-        if e is None:
-            e = "Test Exception"
-        print(f'Manually raised exception: {e}')
-        await ctx.send(f'Manually raised exception: {e}')
-        raise Exception(e)
+    async def raise_exception(self, ctx, msg: str = None):
+        if msg is None:
+            msg = "Manually raised Exception"
+        raise commands.CommandError(msg)

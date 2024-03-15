@@ -1,15 +1,15 @@
 """
 Source: https://gist.github.com/EvieePy/ab667b74e9758433b3eb806c53a19f34
 """
-import os.path
-
-import discord
-from discord.ext import commands
-
+import os
+import logging
 import asyncio
 from asyncio.timeouts import timeout
 from functools import partial
 from yt_dlp import YoutubeDL
+
+import discord
+from discord.ext import commands
 
 
 ytdlopts = {
@@ -61,7 +61,7 @@ class YTDLSource(discord.PCMVolumeTransformer):
         """
         return self.__getattribute__(item)
 
-    def empty_cache(self):
+    def delete_cache(self):
         # TODO separate cached files for different guilds
         if isinstance(self.source, str) and os.path.isfile(self.source):
             # source.source is path to downloaded audio
@@ -100,7 +100,7 @@ class YTDLSource(discord.PCMVolumeTransformer):
         to_run = partial(ytdl.extract_info, url=data['webpage_url'], download=False)
         data = await loop.run_in_executor(None, to_run)
 
-        return cls(discord.FFmpegPCMAudio(data['url']), data=data, requester=requester)
+        return cls(discord.FFmpegPCMAudio(data['url']), data=data, requester=requester, source=data)
 
 
 class MusicPlayer:
@@ -155,17 +155,20 @@ class MusicPlayer:
             source.volume = self.volume
             self.current = source
 
+            if self._guild.voice_client is None:
+                return await self.destroy(self._guild)
+
             self._guild.voice_client.play(source, after=lambda _: self.bot.loop.call_soon_threadsafe(self.next.set))
             self.np = await self._channel.send(f'**Now Playing:** `{source.title}` requested by '
                                                f'`{source.requester}`')
             await self.next.wait()
 
             # Make sure the FFmpeg process is cleaned up.
-            source.empty_cache()
+            source.delete_cache()
             try:
                 source.cleanup()  # FIXME
             except Exception as e:
-                print(f'Failed to cleanup FFmpeg process: {e}')
+                logging.warning(f'Failed to cleanup FFmpeg process: {e}')
                 pass
             self.current = None
 
@@ -186,7 +189,7 @@ class MusicPlayer:
                 source = await YTDLSource.create_source(ctx, query, loop=self.bot.loop, download=self.download)
                 await self.queue.put(source)
             except Exception as e:
-                print(e)
+                logging.warning(e)
                 await ctx.send(f"Could not add {query} to queue.")
 
     def destroy(self, guild):

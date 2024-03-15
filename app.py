@@ -11,19 +11,13 @@ from music_player.music import Music
 
 
 def setup_logging():
-    logger = logging.getLogger('discord')
-    logger.setLevel(logging.INFO)
-
-    handler = logging.handlers.RotatingFileHandler(
-        filename='discord.log',
-        encoding='utf-8',
-        maxBytes=32 * 1024 * 1024,  # 32 MiB
-        backupCount=5,  # Rotate through 5 files
+    # TODO: Add logging to file? Different files for different guilds?
+    logging.basicConfig(
+        format='[{levelname:<8}] {asctime}: {message}',
+        datefmt='%d-%m-%Y %H:%M:%S',
+        style='{',
+        level=logging.WARNING,
     )
-    dt_fmt = '%Y-%m-%d %H:%M:%S'
-    formatter = logging.Formatter('[{asctime}] [{levelname:<8}] {name}: {message}', dt_fmt, style='{')
-    handler.setFormatter(formatter)
-    logger.addHandler(handler)
 
 
 async def run_discord_bot():
@@ -50,8 +44,13 @@ async def run_discord_bot():
 
     @bot.event
     async def on_command_error(ctx, error):
-        print(error)
+        logging.error(error)
         await ctx.send(error)
+
+    @bot.before_invoke
+    async def before_invoke(ctx):
+        msg = f"Received command: {ctx.message.content} from {ctx.author.name} in {ctx.guild.name}"
+        logging.warning(msg)
 
     load_dotenv()
     DISCORD_TOKEN = os.getenv("DISCORD_TOKEN")

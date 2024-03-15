@@ -13,7 +13,7 @@ from music_player.music import Music
 def setup_logging():
     # TODO: Add logging to file? Different files for different guilds?
     logging.basicConfig(
-        format='[{levelname:<8}] {asctime}: {message}',
+        format='[{levelname:<8}] {asctime} | {message}',
         datefmt='%d-%m-%Y %H:%M:%S',
         style='{',
         level=logging.WARNING,

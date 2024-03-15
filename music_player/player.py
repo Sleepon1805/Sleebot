@@ -68,13 +68,11 @@ class YTDLSource(discord.PCMVolumeTransformer):
             os.remove(self.source)
 
     @classmethod
-    async def create_source(cls, ctx, search: str, *, loop, download=False):
+    async def create_audiosource(cls, ctx, search: str, *, loop, download=False):
         loop = loop or asyncio.get_event_loop()
 
         to_run = partial(ytdl.extract_info, url=search, download=download)
         data = await loop.run_in_executor(None, to_run)
-
-        await ctx.send(f'```ini\n[Added {data["title"]} to the Queue.]\n```', delete_after=15)
 
         if download:
             source = ytdl.prepare_filename(data)
@@ -156,11 +154,11 @@ class MusicPlayer:
             self.current = source
 
             if self._guild.voice_client is None:
-                return await self.destroy(self._guild)
+                continue
 
             self._guild.voice_client.play(source, after=lambda _: self.bot.loop.call_soon_threadsafe(self.next.set))
-            self.np = await self._channel.send(f'**Now Playing:** `{source.title}` requested by '
-                                               f'`{source.requester}`')
+            self.np = await self._channel.send(
+                f'**Now Playing:** `{source.title}` requested by {source.requester}`')
             await self.next.wait()
 
             # Make sure the FFmpeg process is cleaned up.
@@ -169,7 +167,7 @@ class MusicPlayer:
                 source.cleanup()  # FIXME
             except Exception as e:
                 logging.warning(f'Failed to cleanup FFmpeg process: {e}')
-                pass
+
             self.current = None
 
             try:
@@ -186,11 +184,13 @@ class MusicPlayer:
 
         for query in song_queries:
             try:
-                source = await YTDLSource.create_source(ctx, query, loop=self.bot.loop, download=self.download)
-                await self.queue.put(source)
+                audiosource = await YTDLSource.create_audiosource(
+                    ctx, query, loop=self.bot.loop, download=self.download)
+                await ctx.send(f'```Added {audiosource.title} to the queue.```', delete_after=20)
+                await self.queue.put(audiosource)
             except Exception as e:
-                logging.warning(e)
-                await ctx.send(f"Could not add {query} to queue.")
+                logging.warning(e)  # FIXME logging format
+                await ctx.send(f'```Could not add {query} to the queue.```', delete_after=20)
 
     def destroy(self, guild):
         """Disconnect and cleanup the player."""

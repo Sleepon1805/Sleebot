@@ -6,10 +6,11 @@ class Basic(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
-    @commands.command()
+    @commands.command(
+        name='server_info',
+        brief="Prints details of server",
+    )
     async def server_info(self, ctx):
-        """Prints details of server"""
-
         guild_name = ctx.guild.name
         owner = str(ctx.guild.owner)
         region = str(ctx.guild.region) if hasattr(ctx.guild, "region") else ""
@@ -31,20 +32,27 @@ class Basic(commands.Cog):
 
         await ctx.send(embed=embed)
 
-    @commands.command()
+    @commands.command(
+        name='hello',
+        brief="Introduces Sleebot",
+    )
     async def hello(self, ctx):
-        """Introduces Sleebot"""
         text = "Hello! My name is Sleebot! Contact @Sleepon for any questions."
         await ctx.send(text)
 
-    @commands.command()
+    @commands.command(
+        name='pm',
+        brief="Sends a message to your personal messages",
+    )
     async def pm(self, ctx):
-        """Sends a message to your personal messages."""
         await ctx.author.send('Hello! Type !help to get list of available commands.')
 
-    @commands.command()
+    @commands.command(
+        name='raise_exception',
+        alias=['raise'],
+        brief="Prints and raises an exception",
+    )
     async def raise_exception(self, ctx, e: str = None):
-        """Prints and raises an exception"""
         if e is None:
             e = "Test Exception"
         print(f'Manually raised exception: {e}')

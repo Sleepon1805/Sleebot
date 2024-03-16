@@ -1,104 +1,13 @@
 """
 Source: https://gist.github.com/EvieePy/ab667b74e9758433b3eb806c53a19f34
 """
-import os
 import logging
 import asyncio
 from asyncio.timeouts import timeout
-from functools import partial
-from yt_dlp import YoutubeDL
-
-import discord
 from discord.ext import commands
 
-
-ytdlopts = {
-    'format': 'bestaudio/best',
-    'outtmpl': 'cache/%(extractor)s-%(id)s.%(ext)s',
-    'restrictfilenames': True,
-    'noplaylist': True,
-    'nocheckcertificate': True,
-    'ignoreerrors': False,
-    'logtostderr': False,
-    'quiet': True,
-    'no_warnings': True,
-    'default_search': 'auto',
-    'source_address': '0.0.0.0'  # ipv6 addresses cause issues sometimes
-}
-
-ffmpegopts = {
-    'before_options': '-nostdin',
-    'options': '-vn'
-}
-
-ytdl = YoutubeDL(ytdlopts)
-
-
-class VoiceConnectionError(commands.CommandError):
-    """Custom Exception class for connection errors."""
-
-
-class InvalidVoiceChannel(VoiceConnectionError):
-    """Exception for cases of invalid Voice Channels."""
-
-
-class YTDLSource(discord.PCMVolumeTransformer):
-
-    def __init__(self, audio: discord.FFmpegPCMAudio, *, data, requester, source):
-        super().__init__(audio)
-        self.requester = requester
-
-        self.source = source
-        self.title = data.get('title')
-        self.web_url = data.get('webpage_url')
-
-        # YTDL info dicts (data) have other useful information you might want
-        # https://github.com/rg3/youtube-dl/blob/master/README.md
-
-    def __getitem__(self, item: str):
-        """Allows us to access attributes similar to a dict.
-        This is only useful when you are NOT downloading.
-        """
-        return self.__getattribute__(item)
-
-    def delete_cache(self):
-        # TODO separate cached files for different guilds
-        if isinstance(self.source, str) and os.path.isfile(self.source):
-            # source.source is path to downloaded audio
-            os.remove(self.source)
-
-    @classmethod
-    async def create_audiosource(cls, ctx, search: str, *, loop, download=False):
-        loop = loop or asyncio.get_event_loop()
-
-        to_run = partial(ytdl.extract_info, url=search, download=download)
-        data = await loop.run_in_executor(None, to_run)
-
-        if download:
-            source = ytdl.prepare_filename(data)
-            return cls(discord.FFmpegPCMAudio(source), data=data, requester=ctx.author, source=source)
-        else:
-            return {'webpage_url': data['webpage_url'], 'requester': ctx.author, 'title': data['title']}
-
-    @classmethod
-    async def extract_urls_from_playlist(cls, playlist_url, loop):
-        assert "playlist?list=" in playlist_url
-        to_run = partial(ytdl.extract_info, url=playlist_url, download=False, process=False)
-        data = await loop.run_in_executor(None, to_run)
-        urls = [entry['url'] for entry in data['entries']]
-        return urls
-
-    @classmethod
-    async def regather_stream(cls, data, *, loop):
-        """Used for preparing a stream, instead of downloading.
-        Since Youtube Streaming links expire."""
-        loop = loop or asyncio.get_event_loop()
-        requester = data['requester']
-
-        to_run = partial(ytdl.extract_info, url=data['webpage_url'], download=False)
-        data = await loop.run_in_executor(None, to_run)
-
-        return cls(discord.FFmpegPCMAudio(data['url']), data=data, requester=requester, source=data)
+from music_player.source import YTDLSource
+from music_player.embed import PlayerEmbed
 
 
 class MusicPlayer:
@@ -108,8 +17,6 @@ class MusicPlayer:
     When the bot disconnects from the Voice it's instance will be destroyed.
     """
 
-    __slots__ = ('bot', '_guild', '_channel', '_cog', 'queue', 'next', 'current', 'np', 'volume', 'download')
-
     def __init__(self, ctx):
         self.bot: commands.Bot = ctx.bot
         self._guild = ctx.guild
@@ -118,8 +25,8 @@ class MusicPlayer:
 
         self.queue = asyncio.Queue()
         self.next = asyncio.Event()
+        self._embed = PlayerEmbed()
 
-        self.np = None  # Now playing message
         self.volume = .5
         self.current = None
         self.download = True
@@ -155,10 +62,13 @@ class MusicPlayer:
 
             if self._guild.voice_client is None:
                 continue
+            else:
+                self._guild.voice_client.play(
+                    source,
+                    after=lambda _: self.bot.loop.call_soon_threadsafe(self.next.set)
+                )
 
-            self._guild.voice_client.play(source, after=lambda _: self.bot.loop.call_soon_threadsafe(self.next.set))
-            self.np = await self._channel.send(
-                f'**Now Playing:** `{source.title}` requested by {source.requester}`')
+            await self.update_embed()
             await self.next.wait()
 
             # Make sure the FFmpeg process is cleaned up.
@@ -170,12 +80,6 @@ class MusicPlayer:
 
             self.current = None
 
-            try:
-                # We are no longer playing this song...
-                await self.np.delete()
-            except discord.HTTPException:
-                pass
-
     async def add_to_queue(self, ctx, query: str):
         if "playlist?list=" in query:
             song_queries = await YTDLSource.extract_urls_from_playlist(query, self.bot.loop)
@@ -186,8 +90,8 @@ class MusicPlayer:
             try:
                 audiosource = await YTDLSource.create_audiosource(
                     ctx, query, loop=self.bot.loop, download=self.download)
-                await ctx.send(f'```Added {audiosource.title} to the queue.```', delete_after=20)
                 await self.queue.put(audiosource)
+                await self.update_embed()
             except Exception as e:
                 logging.warning(e)  # FIXME logging format
                 await ctx.send(f'```Could not add {query} to the queue.```', delete_after=20)
@@ -199,3 +103,15 @@ class MusicPlayer:
     def get_queue_items(self):
         # FIXME
         return list(self.queue._queue)
+
+    async def update_embed(self):
+        await self._embed.update(
+            self.current,
+            self.get_queue_items(),
+            self._guild.voice_client.channel
+        )
+
+    async def send_new_embed_msg(self, ctx):
+        await self.update_embed()
+        await self._embed.resend_msg(ctx)
+

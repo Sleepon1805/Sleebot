@@ -1,11 +1,8 @@
 """
 Source: https://gist.github.com/EvieePy/ab667b74e9758433b3eb806c53a19f34
 """
-
-import discord
-from discord.ext.commands import Cog, command
-
 import asyncio
+from discord.ext.commands import Cog, command
 
 from music_player.player import MusicPlayer
 
@@ -36,7 +33,7 @@ class Music(Cog):
         except KeyError:
             pass
 
-    def get_player(self, ctx):
+    def get_player(self, ctx) -> MusicPlayer:
         """Retrieve the guild player, or generate one."""
         guild_id = ctx.guild.id
         if guild_id in self.players:
@@ -95,6 +92,7 @@ class Music(Cog):
             await ctx.invoke(self.connect)
 
         player = self.get_player(ctx)
+        await player.send_new_embed_msg(ctx)
         await player.add_to_queue(ctx, query)
 
     @command(
@@ -146,51 +144,25 @@ class Music(Cog):
         await ctx.send(f'**`{ctx.author}`**: Skipped the song!')
 
     @command(
+        name='stop',
+        brief="Stop the currently playing song and destroy the player",
+    )
+    async def stop(self, ctx):
+        vc = ctx.voice_client
+
+        if not vc or not vc.is_connected():
+            return await ctx.send('I am not currently playing anything!', delete_after=20)
+
+        await self.cleanup(ctx.guild)
+
+    @command(
         name='queue',
-        aliases=['q', 'playlist'],
+        aliases=['q', 's', 'np', 'status', 'playing', 'now_playing'],
         brif="Show a queue of upcoming songs",
     )
     async def queue(self, ctx):
-        vc = ctx.voice_client
-
-        if not vc or not vc.is_connected():
-            return await ctx.send('I am not currently connected to voice!', delete_after=20)
-
         player = self.get_player(ctx)
-        if player.queue.empty():
-            return await ctx.send('There are currently no more queued songs.')
-
-        # Grab up to 5 entries from the queue...
-        upcoming = player.get_queue_items()
-
-        fmt = '\n'.join(f'**`{_["title"]}`**' for _ in upcoming)
-        embed = discord.Embed(title=f'Upcoming songs: {len(upcoming)}', description=fmt)
-
-        await ctx.send(embed=embed)
-
-    @command(
-        name='now_playing',
-        aliases=['np', 'current', 'currentsong', 'playing'],
-        brief="Display information about the current song",
-    )
-    async def now_playing(self, ctx):
-        vc = ctx.voice_client
-
-        if not vc or not vc.is_connected():
-            return await ctx.send('I am not currently connected to voice!', delete_after=20)
-
-        player = self.get_player(ctx)
-        if not player.current:
-            return await ctx.send('I am not currently playing anything!')
-
-        try:
-            # Remove our previous now_playing message.
-            await player.np.delete()
-        except discord.HTTPException:
-            pass
-
-        player.np = await ctx.send(f'**Now Playing:** `{vc.source.title}` '
-                                   f'requested by `{vc.source.requester}`')
+        await player.send_new_embed_msg(ctx)
 
     @command(
         name='volume',
@@ -218,15 +190,3 @@ class Music(Cog):
 
         player.volume = volume / 100
         await ctx.send(f'**`{ctx.author}`**: Set the volume to **{volume}%**')
-
-    @command(
-        name='stop',
-        brief="Stop the currently playing song and destroy the player",
-    )
-    async def stop(self, ctx):
-        vc = ctx.voice_client
-
-        if not vc or not vc.is_connected():
-            return await ctx.send('I am not currently playing anything!', delete_after=20)
-
-        await self.cleanup(ctx.guild)

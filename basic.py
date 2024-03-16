@@ -51,6 +51,7 @@ class Basic(commands.Cog):
         name='raise_exception',
         aliases=['raise'],
         brief="Prints and raises an exception",
+        hidden=True,
     )
     async def raise_exception(self, ctx, msg: str = None):
         if msg is None:

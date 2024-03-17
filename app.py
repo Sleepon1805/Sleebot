@@ -11,20 +11,34 @@ from music_player.music import Music
 
 
 def setup_logging():
-    # TODO: Add logging to file? Different files for different guilds?
-    logging.basicConfig(
-        format='[{levelname:<8}] {asctime} | {message}',
-        datefmt='%d-%m-%Y %H:%M:%S',
-        style='{',
-        level=logging.WARNING,
+    handler = logging.handlers.RotatingFileHandler(
+        filename='discord.log',
+        encoding='utf-8',
+        maxBytes=32 * 1024 * 1024,  # 32 MiB
+        backupCount=5,  # Rotate through 5 files
     )
+    formatter = logging.Formatter(
+        fmt='[{levelname:<8}] {asctime} | {message}',
+        datefmt='%d-%m-%Y %H:%M:%S',
+        style='{'
+    )
+    handler.setFormatter(formatter)
+    discord.utils.setup_logging(level=logging.WARNING, handler=handler, formatter=formatter, root=True)
 
 
 async def run_discord_bot():
     intents = discord.Intents.default()
     intents.message_content = True
 
-    bot = commands.Bot(command_prefix='!', intents=intents)
+    bot = commands.Bot(
+        command_prefix='!',
+        intents=intents,
+        status=discord.Status.online,
+        activity=discord.Activity(
+            type=discord.ActivityType.listening,
+            name="!help"
+        )
+    )
 
     @bot.event
     async def on_ready():
@@ -35,8 +49,6 @@ async def run_discord_bot():
         for guild in bot.guilds:
             print(f"{guild.name} (ID: {guild.id})")
         print('------')
-
-        await bot.change_presence(status=discord.Status.online, activity=discord.Game(name="!help for commands"))
 
     @bot.event
     async def on_guild_join(guild):

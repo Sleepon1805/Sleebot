@@ -46,7 +46,7 @@ class MusicPlayer:
                 async with timeout(300):  # 5 minutes...
                     source = await self.queue.get()
             except asyncio.TimeoutError:
-                return self.destroy(self._guild)
+                return self.destroy()
 
             if not isinstance(source, YTDLSource):
                 # Source was probably a stream (not downloaded)
@@ -97,9 +97,18 @@ class MusicPlayer:
                 logging.warning(e)  # FIXME logging format
                 await ctx.send(f'```Could not add {query} to the queue.```', delete_after=20)
 
-    def destroy(self, guild):
+    async def destroy(self):
         """Disconnect and cleanup the player."""
-        return self.bot.loop.create_task(self._cog.cleanup(guild))
+
+        queue = self.get_queue_items()
+        for source in queue:
+            source.delete_cache()
+        self.queue = asyncio.Queue()  # clear queue
+
+        try:
+            await self._guild.voice_client.disconnect()
+        except AttributeError:
+            pass
 
     def get_queue_items(self):
         # FIXME

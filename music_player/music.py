@@ -16,23 +16,6 @@ class Music(Cog):
         self.bot = bot
         self.players = {}
 
-    async def cleanup(self, guild):
-        try:
-            await guild.voice_client.disconnect()
-        except AttributeError:
-            pass
-
-        player = self.players[guild.id]
-
-        queue = player.get_queue_items()
-        for source in queue:
-            source.delete_cache()
-
-        try:
-            del self.players[guild.id]
-        except KeyError:
-            pass
-
     def get_player(self, ctx) -> MusicPlayer:
         """Retrieve the guild player, or generate one."""
         guild_id = ctx.guild.id
@@ -153,7 +136,9 @@ class Music(Cog):
         if not vc or not vc.is_connected():
             return await ctx.send('I am not currently playing anything!', delete_after=20)
 
-        await self.cleanup(ctx.guild)
+        player = self.players.pop(ctx.guild.id, None)
+        if player:
+            await player.destroy()
 
     @command(
         name='queue',

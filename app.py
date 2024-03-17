@@ -36,7 +36,7 @@ async def run_discord_bot():
             print(f"{guild.name} (ID: {guild.id})")
         print('------')
 
-        # await bot.change_presence(status=discord.Status.online, activity=discord.Game(name=" Music, type !help "))
+        await bot.change_presence(status=discord.Status.online, activity=discord.Game(name="!help for commands"))
 
     @bot.event
     async def on_guild_join(guild):

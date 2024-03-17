@@ -84,10 +84,10 @@ class Music(Cog):
 
     @command(
         name='artist',
-        brief="(Spotify) Requests a top songs from artist",
+        brief="(Spotify) Requests songs by artist",
         help=
         """
-        Requests a top songs from artist based on spotify search.
+        Requests songs from spotify list by artist name.
         Uses YTDL to automatically search and retrieve a song.
         artist_name: str: An artist name.
         limit: int: The number of top songs to add to the queue.
@@ -96,52 +96,47 @@ class Music(Cog):
     async def artist(self, ctx, *args):
         if args[-1].isdigit():
             artist_name = ' '.join(args[:-1])
-            limit = int(args[-1])
+            limit = args[-1]
         else:
             artist_name = ' '.join(args)
             limit = None
-
-        vc = ctx.voice_client
-        if not vc:
-            await ctx.invoke(self.connect)
-
-        top_tracks = self.spotify_handler.get_artist_top_tracks(
-            artist_name, limit=limit, return_search=True)  # YouTube search queries
-
-        player = self.get_player(ctx)
-        await player.send_new_embed_msg(ctx)
-        await player.add_to_queue(ctx, top_tracks)
+        playlist_name = f"This Is {artist_name}"
+        args = playlist_name.split(' ')
+        if limit:
+            args.append(limit)
+        await self.playlist(ctx, *args)
 
     @command(
-        name='mix',
-        aliases=['jam'],
-        brief="(Spotify) Requests a mix playlist by artist (n songs)",
+        name='playlist',
+        aliases=['spotify'],
+        brief="(Spotify) Requests a spotify playlist.",
         help=
         """
-        Requests a songs from Mix-Playlist by Spotify.
+        Requests songs from spotify playlist.
+        Consider "This is <artist_name>" or "<artist_name> Mix".
         Uses YTDL to automatically search and retrieve a song.
         artist_name: str: An artist name.
         limit: int: The number of top songs to add to the queue.
         """
     )
-    async def mix(self, ctx, *args):
+    async def playlist(self, ctx, *args):
         if args[-1].isdigit():
-            artist_name = ' '.join(args[:-1])
+            playlist_name = ' '.join(args[:-1])
             limit = int(args[-1])
         else:
-            artist_name = ' '.join(args)
+            playlist_name = ' '.join(args)
             limit = None
 
         vc = ctx.voice_client
         if not vc:
             await ctx.invoke(self.connect)
 
-        top_tracks = self.spotify_handler.get_artist_mix(
-            artist_name, limit=limit, return_search=True)  # YouTube search queries
+        tracks = self.spotify_handler.get_playlist_tracks(
+            playlist_name, limit=limit, return_search=True)  # YouTube search queries
 
         player = self.get_player(ctx)
         await player.send_new_embed_msg(ctx)
-        await player.add_to_queue(ctx, top_tracks)
+        await player.add_to_queue(ctx, tracks)
 
     @command(
         name='recs',

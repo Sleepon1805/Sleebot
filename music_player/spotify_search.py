@@ -13,24 +13,10 @@ class SpotifyHandler:
             )
         )
 
-    def get_artist_top_tracks(
-            self, artist_name: str, limit=None, return_search: bool = True
+    def get_playlist_tracks(
+            self, playlist_name: str, limit=None, return_search: bool = True
     ) -> List[Dict] | List[str]:
-        playlist_items = self._get_playlist_by_name(
-            f"This is {artist_name}", sortby='popularity')
-
-        limit = min(limit, len(playlist_items)) if limit else len(playlist_items)
-        top_tracks = [item['track'] for item in playlist_items[:limit]]
-
-        if return_search:
-            top_tracks = self.tracks_to_yt_searches(top_tracks)
-        return top_tracks
-
-    def get_artist_mix(
-            self, artist_name: str, limit=None, return_search: bool = True
-    ) -> List[Dict] | List[str]:
-        playlist_items = self._get_playlist_by_name(
-            f"{artist_name} Mix")
+        playlist_items = self._get_playlist_by_name(playlist_name)
 
         limit = min(limit, len(playlist_items)) if limit else len(playlist_items)
         tracks = [item['track'] for item in playlist_items[:limit]]

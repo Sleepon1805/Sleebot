@@ -18,10 +18,11 @@ class PlayerEmbed:
     ):
         # Now playing
         if current:
+            current_str = self.source_to_str(current)
             channel_playing = ' in ' + channel.name if channel else ''
             embed = discord.Embed(
                 title=f'Now Playing' + channel_playing,
-                description=f'{current}\n [{current.web_url}]',
+                description=f'{current_str}\n [{current.web_url}]',
                 color=discord.Color.blue()
             )
             if 'thumbnail' in current.data:
@@ -35,10 +36,10 @@ class PlayerEmbed:
 
         # Queue
         if len(queue) > 0:
-            field_value = '\n'.join(f'{num}. {source}' for num, source in enumerate(queue))
-            if len(field_value) > 1024:
-                field_value = '\n'.join(f'{num}. {source}' for num, source in enumerate(queue[:10]))
-                field_value += f'\n and {len(queue) - 10} more...'
+            songs_queue = queue if len(queue) <= 5 else queue[:5]
+            field_value = '\n'.join(f'{num}. {self.source_to_str(source)}' for num, source in enumerate(songs_queue))
+            if len(queue) > 5:
+                field_value += f'\nAnd {len(queue) - 5} more...'
             embed.add_field(
                 name=f'Queued songs: {len(queue)}',
                 value=field_value,
@@ -60,3 +61,17 @@ class PlayerEmbed:
         if self.msg:
             await self.msg.delete()
         self.msg = await ctx.send(embed=self.embed)
+
+    @staticmethod
+    def source_to_str(source: YTDLSource):
+        if 'artist' in source.data and 'track' in source.data:
+            song_str = f'`{source.data['track']}` by `{source.data['artist']}`'
+        else:
+            song_str = f'`{source.title}`'
+
+        requester_str = f'requested by `{source.requester.display_name}`'
+
+        duration_str = f'({timedelta(seconds=source.data['duration'])})'
+        duration_str = duration_str[2:] if duration_str.startswith('0:') else duration_str  # FIXME
+
+        return ' '.join([song_str, requester_str, duration_str])

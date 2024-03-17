@@ -49,19 +49,6 @@ class YTDLSource(discord.PCMVolumeTransformer):
         """
         return self.__getattribute__(item)
 
-    def __repr__(self):
-        if 'artist' in self.data and 'track' in self.data:
-            song_str = f'`{self.data['track']}` by `{self.data['artist']}`'
-        else:
-            song_str = f'`{self.title}`'
-
-        requester_str = f'requested by `{self.requester.display_name}`'
-
-        duration_str = f'({timedelta(seconds=self.data['duration'])})'
-        duration_str = duration_str[2:] if duration_str.startswith('0:') else duration_str
-
-        return ' '.join([song_str, requester_str, duration_str])
-
     def delete_cache(self):
         # TODO separate cached files for different guilds
         if isinstance(self.source, str) and os.path.isfile(self.source):

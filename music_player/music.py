@@ -165,6 +165,15 @@ class Music(Cog):
         await player.send_new_embed_msg(ctx)
 
     @command(
+        name='shuffle',
+        brif="Shuffle a queue of upcoming songs",
+    )
+    async def shuffle(self, ctx):
+        player = self.get_player(ctx)
+        player.shuffle_queue()
+        await player.send_new_embed_msg(ctx)
+
+    @command(
         name='volume',
         aliases=['v', 'vol'],
         brief="Change the player volume.",

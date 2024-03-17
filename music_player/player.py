@@ -5,6 +5,7 @@ import logging
 import asyncio
 from asyncio.timeouts import timeout
 from discord.ext import commands
+from random import shuffle
 
 from music_player.source import YTDLSource
 from music_player.embed import PlayerEmbed
@@ -103,6 +104,10 @@ class MusicPlayer:
     def get_queue_items(self):
         # FIXME
         return list(self.queue._queue)
+
+    def shuffle_queue(self):
+        # FIXME
+        shuffle(self.queue._queue)
 
     async def update_embed(self):
         await self._embed.update(

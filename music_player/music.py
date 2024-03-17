@@ -5,6 +5,7 @@ import asyncio
 from discord.ext.commands import Cog, command
 
 from music_player.player import MusicPlayer
+from music_player.spotify_search import SpotifyHandler
 
 
 class Music(Cog):
@@ -15,6 +16,8 @@ class Music(Cog):
     def __init__(self, bot):
         self.bot = bot
         self.players = {}
+
+        self.spotify_handler = SpotifyHandler()
 
     def get_player(self, ctx) -> MusicPlayer:
         """Retrieve the guild player, or generate one."""
@@ -31,6 +34,7 @@ class Music(Cog):
         name='connect',
         aliases=['join'],
         brief="Connects to your voice channel.",
+        hidden=True,
     )
     async def connect(self, ctx):
         try:
@@ -61,7 +65,7 @@ class Music(Cog):
     @command(
         name='play',
         aliases=['p', 'sing', 'add'],
-        brief="Requests a song and adds it to the queue",
+        brief="(Youtube) Requests a song by query or URL",
         help=
         """
         Request a song and add it to the queue.
@@ -77,6 +81,98 @@ class Music(Cog):
         player = self.get_player(ctx)
         await player.send_new_embed_msg(ctx)
         await player.add_to_queue(ctx, query)
+
+    @command(
+        name='artist',
+        brief="(Spotify) Requests a top songs from artist",
+        help=
+        """
+        Requests a top songs from artist based on spotify search.
+        Uses YTDL to automatically search and retrieve a song.
+        artist_name: str: An artist name.
+        limit: int: The number of top songs to add to the queue.
+        """
+    )
+    async def artist(self, ctx, *args):
+        if args[-1].isdigit():
+            artist_name = ' '.join(args[:-1])
+            limit = int(args[-1])
+        else:
+            artist_name = ' '.join(args)
+            limit = None
+
+        vc = ctx.voice_client
+        if not vc:
+            await ctx.invoke(self.connect)
+
+        top_tracks = self.spotify_handler.get_artist_top_tracks(
+            artist_name, limit=limit, return_search=True)  # YouTube search queries
+
+        player = self.get_player(ctx)
+        await player.send_new_embed_msg(ctx)
+        await player.add_to_queue(ctx, top_tracks)
+
+    @command(
+        name='mix',
+        aliases=['jam'],
+        brief="(Spotify) Requests a mix playlist by artist (n songs)",
+        help=
+        """
+        Requests a songs from Mix-Playlist by Spotify.
+        Uses YTDL to automatically search and retrieve a song.
+        artist_name: str: An artist name.
+        limit: int: The number of top songs to add to the queue.
+        """
+    )
+    async def mix(self, ctx, *args):
+        if args[-1].isdigit():
+            artist_name = ' '.join(args[:-1])
+            limit = int(args[-1])
+        else:
+            artist_name = ' '.join(args)
+            limit = None
+
+        vc = ctx.voice_client
+        if not vc:
+            await ctx.invoke(self.connect)
+
+        top_tracks = self.spotify_handler.get_artist_mix(
+            artist_name, limit=limit, return_search=True)  # YouTube search queries
+
+        player = self.get_player(ctx)
+        await player.send_new_embed_msg(ctx)
+        await player.add_to_queue(ctx, top_tracks)
+
+    @command(
+        name='recs',
+        aliases=['r', 'rec', 'recommendations'],
+        brief="(Spotify) Requests a spotify recommendations by artist",
+        help=
+        """
+        Requests songs from spotify recommendations based on artist seed.
+        Uses YTDL to automatically search and retrieve a song.
+        artist_name: str: An artist name.
+        limit: int: The number of top songs to add to the queue.
+        """
+    )
+    async def recs(self, ctx, *args):
+        if args[-1].isdigit():
+            artist_name = ' '.join(args[:-1])
+            limit = int(args[-1])
+        else:
+            artist_name = ' '.join(args)
+            limit = None
+
+        vc = ctx.voice_client
+        if not vc:
+            await ctx.invoke(self.connect)
+
+        top_tracks = self.spotify_handler.get_artist_recommendations(
+            artist_name, limit=limit, return_search=True)  # YouTube search queries
+
+        player = self.get_player(ctx)
+        await player.send_new_embed_msg(ctx)
+        await player.add_to_queue(ctx, top_tracks)
 
     @command(
         name='pause',
@@ -128,7 +224,7 @@ class Music(Cog):
 
     @command(
         name='stop',
-        brief="Stops the currently playing song and destroys the player",
+        brief="Stops and empties the queue.",
     )
     async def stop(self, ctx):
         vc = ctx.voice_client

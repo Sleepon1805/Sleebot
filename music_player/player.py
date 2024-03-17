@@ -6,6 +6,7 @@ import asyncio
 from asyncio.timeouts import timeout
 from discord.ext import commands
 from random import shuffle
+from typing import List
 
 from music_player.youtube_handler import YTDLSource
 from music_player.embed import PlayerEmbed
@@ -81,21 +82,23 @@ class MusicPlayer:
 
             self.current = None
 
-    async def add_to_queue(self, ctx, query: str):
-        if "playlist?list=" in query:
+    async def add_to_queue(self, ctx, query: str | List[str]):
+        if isinstance(query, list):
+            song_queries = query
+        elif "playlist?list=" in query:
             song_queries = await YTDLSource.extract_urls_from_playlist(query, self.bot.loop)
         else:
             song_queries = [query]
 
-        for query in song_queries:
+        for q in song_queries:
             try:
                 audiosource = await YTDLSource.create_audiosource(
-                    ctx, query, loop=self.bot.loop, download=self.download)
+                    ctx, q, loop=self.bot.loop, download=self.download)
                 await self.queue.put(audiosource)
                 await self.update_embed()
             except Exception as e:
                 logging.warning(e)  # FIXME logging format
-                await ctx.send(f'```Could not add {query} to the queue.```', delete_after=20)
+                await ctx.send(f'```Could not add {q} to the queue.```', delete_after=20)
 
     async def destroy(self):
         """Disconnect and cleanup the player."""

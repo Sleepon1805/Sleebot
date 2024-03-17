@@ -7,10 +7,11 @@ class Basic(commands.Cog):
         self.bot = bot
 
     @commands.command(
-        name='server_info',
+        name='server',
+        aliases=['server_info'],
         brief="Prints details of server",
     )
-    async def server_info(self, ctx):
+    async def server(self, ctx):
         guild_name = ctx.guild.name
         owner = str(ctx.guild.owner)
         region = str(ctx.guild.region) if hasattr(ctx.guild, "region") else ""

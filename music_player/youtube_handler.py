@@ -55,11 +55,15 @@ class YTDLSource(discord.PCMVolumeTransformer):
             os.remove(self.source)
 
     @classmethod
-    async def create_audiosource(cls, ctx, search: str, *, loop, download=False):
+    async def create_audiosource(cls, ctx, url: str, *, loop, download=False):
         loop = loop or asyncio.get_event_loop()
 
-        to_run = partial(ytdl.extract_info, url=search, download=download)
+        to_run = partial(ytdl.extract_info, url=url, download=download)
         data = await loop.run_in_executor(None, to_run)
+
+        if 'entries' in data:
+            # playlist should be handled in player.py
+            data = data['entries'][0]
 
         if download:
             source = ytdl.prepare_filename(data)

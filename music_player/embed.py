@@ -2,7 +2,7 @@ from datetime import timedelta
 from typing import Optional, List
 import discord
 
-from music_player.source import YTDLSource
+from music_player.youtube_handler import YTDLSource
 
 
 class PlayerEmbed:

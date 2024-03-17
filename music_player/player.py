@@ -7,7 +7,7 @@ from asyncio.timeouts import timeout
 from discord.ext import commands
 from random import shuffle
 
-from music_player.source import YTDLSource
+from music_player.youtube_handler import YTDLSource
 from music_player.embed import PlayerEmbed
 
 
@@ -100,10 +100,12 @@ class MusicPlayer:
     async def destroy(self):
         """Disconnect and cleanup the player."""
 
+        # delete all downloaded audiofiles
         queue = self.get_queue_items()
         for source in queue:
             source.delete_cache()
-        self.queue = asyncio.Queue()  # clear queue
+        # clear queue
+        self.queue = asyncio.Queue()
 
         try:
             await self._guild.voice_client.disconnect()

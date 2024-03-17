@@ -1,7 +1,6 @@
 import os
 import asyncio
 from functools import partial
-from datetime import timedelta
 
 import discord
 from yt_dlp import YoutubeDL
@@ -9,7 +8,7 @@ from yt_dlp import YoutubeDL
 
 ytdlopts = {
     'format': 'bestaudio/best',
-    'outtmpl': 'cache/%(extractor)s-%(id)s.%(ext)s',
+    'outtmpl': 'cache/ytdl/%(extractor)s-%(id)s.%(ext)s',
     'restrictfilenames': True,
     'noplaylist': True,
     'nocheckcertificate': True,

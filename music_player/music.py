@@ -30,7 +30,7 @@ class Music(Cog):
     @command(
         name='connect',
         aliases=['join'],
-        brief="Connect to your voice channel.",
+        brief="Connects to your voice channel.",
     )
     async def connect(self, ctx):
         try:
@@ -61,7 +61,7 @@ class Music(Cog):
     @command(
         name='play',
         aliases=['p', 'sing', 'add'],
-        brief="Request a song and add it to the queue.",
+        brief="Requests a song and adds it to the queue",
         help=
         """
         Request a song and add it to the queue.
@@ -80,7 +80,7 @@ class Music(Cog):
 
     @command(
         name='pause',
-        brief="Pause the current song",
+        brief="Pauses the current song",
     )
     async def pause(self, ctx):
         vc = ctx.voice_client
@@ -95,7 +95,7 @@ class Music(Cog):
 
     @command(
         name='resume',
-        brief="Resume if paused",
+        brief="Resumes if paused",
     )
     async def resume(self, ctx):
         vc = ctx.voice_client
@@ -110,7 +110,7 @@ class Music(Cog):
 
     @command(
         name='skip',
-        brief="Skip the current song",
+        brief="Skips the current song",
     )
     async def skip(self, ctx):
         vc = ctx.voice_client
@@ -128,7 +128,7 @@ class Music(Cog):
 
     @command(
         name='stop',
-        brief="Stop the currently playing song and destroy the player",
+        brief="Stops the currently playing song and destroys the player",
     )
     async def stop(self, ctx):
         vc = ctx.voice_client
@@ -143,7 +143,7 @@ class Music(Cog):
     @command(
         name='queue',
         aliases=['q', 's', 'np', 'status', 'playing', 'now_playing'],
-        brif="Show a queue of upcoming songs",
+        brief="Shows a queue of upcoming songs",
     )
     async def queue(self, ctx):
         player = self.get_player(ctx)
@@ -151,7 +151,7 @@ class Music(Cog):
 
     @command(
         name='shuffle',
-        brif="Shuffle a queue of upcoming songs",
+        brief="Shuffles a queue of upcoming songs",
     )
     async def shuffle(self, ctx):
         player = self.get_player(ctx)
@@ -161,10 +161,10 @@ class Music(Cog):
     @command(
         name='volume',
         aliases=['v', 'vol'],
-        brief="Change the player volume.",
+        brief="Changes the player volume.",
         help=
         """
-        Change the player volume.
+        Changes the player volume
         volume: float or int: The volume to set the player to in percentage. This must be between 1 and 100.
         """
     )
@@ -174,7 +174,7 @@ class Music(Cog):
         if not vc or not vc.is_connected():
             return await ctx.send('I am not currently connected to voice!', delete_after=20)
 
-        if not 0 < volume < 101:
+        if not 1 <= volume <= 100:
             return await ctx.send('Please enter a value between 1 and 100.')
 
         player = self.get_player(ctx)

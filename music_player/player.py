@@ -47,7 +47,8 @@ class MusicPlayer:
                 async with timeout(300):  # 5 minutes...
                     source = await self.queue.get()
             except asyncio.TimeoutError:
-                return self.destroy()
+                await self.destroy()
+                return
 
             if not isinstance(source, YTDLSource):
                 # Source was probably a stream (not downloaded)
@@ -90,15 +91,16 @@ class MusicPlayer:
         else:
             song_queries = [query]
 
-        for q in song_queries:
-            try:
-                audiosource = await YTDLSource.create_audiosource(
-                    ctx, q, loop=self.bot.loop, download=self.download)
-                await self.queue.put(audiosource)
-                await self.update_embed()
-            except Exception as e:
-                logging.warning(e)  # FIXME logging format
-                await ctx.send(f'```Could not add {q} to the queue.```', delete_after=20)
+        async with ctx.typing():
+            for q in song_queries:
+                try:
+                    audiosource = await YTDLSource.create_audiosource(
+                        ctx, q, loop=self.bot.loop, download=self.download)
+                    await self.queue.put(audiosource)
+                    await self.update_embed()
+                except Exception as e:
+                    logging.warning(e)  # FIXME logging format
+                    await ctx.send(f'```Could not add {q} to the queue.```', delete_after=20)
 
     async def destroy(self):
         """Disconnect and cleanup the player."""

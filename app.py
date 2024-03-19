@@ -35,8 +35,8 @@ async def run_discord_bot():
         intents=intents,
         status=discord.Status.online,
         activity=discord.Activity(
-            type=discord.ActivityType.listening,
-            name="!help"
+            type=discord.ActivityType.watching,
+            name="!help or description"
         )
     )
 

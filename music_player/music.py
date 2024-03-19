@@ -64,13 +64,13 @@ class Music(Cog):
 
     @command(
         name='play',
-        aliases=['p', 'sing', 'add'],
-        brief="(Youtube) Requests a song by query or URL",
+        aliases=['p', 'add', 'yt', 'youtube'],
+        brief="(Youtube) Requests a song by YT search or URL",
         help=
         """
         Request a song and add it to the queue.
         Uses YTDL to automatically search and retrieve a song.
-        query: str: A simple search string, an YouTube ID or URL.
+        !play <YT search query or URL>
         """
     )
     async def play(self, ctx, *, query: str):
@@ -83,56 +83,54 @@ class Music(Cog):
         await player.add_to_queue(ctx, query)
 
     @command(
-        name='artist',
-        brief="(Spotify) Requests songs by artist",
+        name='spotify',
+        brief="(Spotify) Requests songs based on spotify search.",
         help=
         """
-        Requests songs from spotify list by artist name.
-        Uses YTDL to automatically search and retrieve a song.
-        artist_name: str: An artist name.
-        limit: int: The number of top songs to add to the queue.
+        Makes a spotify search and to add YT songs to the queue.
+        !spotify [<track|artist|album|playlist>] <search_query> [limit=<number_of_songs_to_add>]
         """
     )
-    async def artist(self, ctx, *args):
-        if args[-1].isdigit():
-            artist_name = ' '.join(args[:-1])
-            limit = args[-1]
-        else:
-            artist_name = ' '.join(args)
-            limit = None
-        playlist_name = f"This Is {artist_name}"
-        args = playlist_name.split(' ')
-        if limit:
-            args.append(limit)
-        await self.playlist(ctx, *args)
+    async def spotify(self, ctx, *args):
+        category = None
+        limit = None
+        search = list(args)
+        for arg in args:
+            if arg in ['playlist', 'album', 'artist', 'track']:
+                category = arg
+                search.remove(arg)
+            if 'limit=' in arg or 'lim=' in arg:
+                limit = int(arg.split('=')[1])
+                search.remove(arg)
 
-    @command(
-        name='playlist',
-        aliases=['spotify'],
-        brief="(Spotify) Requests a spotify playlist.",
-        help=
-        """
-        Requests songs from spotify playlist.
-        Consider "This is <artist_name>" or "<artist_name> Mix".
-        Uses YTDL to automatically search and retrieve a song.
-        artist_name: str: An artist name.
-        limit: int: The number of top songs to add to the queue.
-        """
-    )
-    async def playlist(self, ctx, *args):
-        if args[-1].isdigit():
-            playlist_name = ' '.join(args[:-1])
-            limit = int(args[-1])
-        else:
-            playlist_name = ' '.join(args)
-            limit = None
+        search = ' '.join(search)
 
         vc = ctx.voice_client
         if not vc:
             await ctx.invoke(self.connect)
 
-        tracks = self.spotify_handler.get_playlist_tracks(
-            playlist_name, limit=limit, return_search=True)  # YouTube search queries
+        item, out_msg = self.spotify_handler.process_search(search, category)
+
+        if item is None:
+            await ctx.send(out_msg, delete_after=20)
+            return
+
+        category = item['type']
+        if category == 'track':
+            tracks = self.spotify_handler.tracks_to_yt_searches(item)
+        elif category == 'artist':
+            tracks = self.spotify_handler.get_playlist_tracks(
+                playlist=f"This Is {item['name']}", limit=limit, return_search=True)  # YouTube search queries
+        elif category == 'album':
+            tracks = self.spotify_handler.get_album_tracks(
+                item['name'], limit=limit, return_search=True)  # YouTube search queries
+        elif category == 'playlist':
+            tracks = self.spotify_handler.get_playlist_tracks(
+                item['name'], limit=limit, return_search=True)  # YouTube search queries
+        else:
+            tracks = []
+            await ctx.send(f'Unknown category: {category}. Category must be one of: track, artist, album, playlist.')
+        await ctx.send(out_msg)
 
         player = self.get_player(ctx)
         await player.send_new_embed_msg(ctx)
@@ -145,18 +143,22 @@ class Music(Cog):
         help=
         """
         Requests songs from spotify recommendations based on artist seed.
-        Uses YTDL to automatically search and retrieve a song.
-        artist_name: str: An artist name.
-        limit: int: The number of top songs to add to the queue.
+        !recs <artist_name> [limit=<number_of_songs_to_add>]
         """
     )
     async def recs(self, ctx, *args):
-        if args[-1].isdigit():
-            artist_name = ' '.join(args[:-1])
-            limit = int(args[-1])
-        else:
-            artist_name = ' '.join(args)
-            limit = None
+        limit = None
+        search = list(args)
+        for arg in args:
+            if 'limit=' in arg or 'lim=' in arg:
+                limit = int(arg.split('=')[1])
+                search.remove(arg)
+
+        artist_name = ' '.join(search)
+
+        vc = ctx.voice_client
+        if not vc:
+            await ctx.invoke(self.connect)
 
         vc = ctx.voice_client
         if not vc:

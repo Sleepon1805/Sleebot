@@ -13,13 +13,47 @@ class SpotifyHandler:
             )
         )
 
-    def get_playlist_tracks(
-            self, playlist_name: str, limit=None, return_search: bool = True
-    ) -> List[Dict] | List[str]:
-        playlist_items = self._get_playlist_by_name(playlist_name)
+    def process_search(self, search: str, category=None) -> (Dict | None, str):
+        if category:
+            categories = [category]
+        else:
+            categories = ['playlist', 'album', 'artist', 'track']
+        for category in categories:
+            results = self.spotify.search(search, type=category, limit=5)
+            queried_items = results[category + 's']['items']
+            for item in queried_items:
+                if item['name'].lower() == search.lower():
+                    return item, f'Found {item['name']} in category {category}s.'
+        out_msg = f'Could not find {search} in spotify.\n'
+        if not category:
+            out_msg += 'Try to specify search category by calling !play "<track|album|artist|playlist> {search}"'
+        else:
+            out_msg += f'Maybe you meant one of {[item['name'] for item in queried_items]}?'
+        return None, out_msg
 
-        limit = min(limit, len(playlist_items)) if limit else len(playlist_items)
-        tracks = [item['track'] for item in playlist_items[:limit]]
+    def get_album_tracks(
+            self, album: str | Dict, limit=None, return_search: bool = True
+    ) -> List[Dict] | List[str]:
+        if isinstance(album, str):
+            album, out_msg = self.process_search(album, category='album')
+
+        album_tracks = self.spotify.album(album['id'])['tracks']['items']
+
+        limit = min(limit, len(album_tracks)) if limit else len(album_tracks)
+        tracks = album_tracks[:limit]
+
+        if return_search:
+            tracks = self.tracks_to_yt_searches(tracks)
+        return tracks
+
+    def get_playlist_tracks(
+            self, playlist: str | Dict, limit=None, return_search: bool = True
+    ) -> List[Dict] | List[str]:
+        if isinstance(playlist, str):
+            playlist, out_msg = self.process_search(playlist, category='playlist')
+
+        playlist_items = self.spotify.playlist_items(playlist['id'], limit=limit)['items']
+        tracks = [item['track'] for item in playlist_items]
 
         if return_search:
             tracks = self.tracks_to_yt_searches(tracks)
@@ -50,25 +84,6 @@ class SpotifyHandler:
                 artist = a
         return artist
 
-    def _get_playlist_by_name(self, playlist_name: str, sortby: str = None) -> Optional[List[Dict]]:
-        searched_playlists = self.spotify.search(playlist_name, type='playlist')['playlists']['items']
-        playlist = None
-        for p in searched_playlists:
-            if p['name'].lower() == playlist_name.lower():
-                playlist = p
-
-        if playlist is None:
-            logging.warning(f"No playlist found for '{playlist_name}'")
-            return []
-
-        playlist_items = self.spotify.playlist_items(playlist['id'])['items']
-
-        # TODO fix sorting
-        if sortby and sortby in playlist_items[0]['track']:
-            playlist_items = sorted(playlist_items, key=lambda x: x['track'][sortby], reverse=True)
-
-        return playlist_items
-
     @staticmethod
     def tracks_to_yt_searches(tracks: List[Dict] | Dict) -> List[str]:
         if isinstance(tracks, dict):
@@ -86,6 +101,8 @@ if __name__ == '__main__':
     from pprint import pprint
     load_dotenv()
     spotify_handler = SpotifyHandler()
-    artist_to_search = 'Mass Hysteria'
-    output = spotify_handler.get_artist_recommendations(artist_to_search)
-    pprint(spotify_handler.tracks_to_yt_searches(output))
+
+    search_str = 'Mass Hysteria Radio'
+    output = spotify_handler.get_playlist_tracks(search_str)
+
+    pprint(output)

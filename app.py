@@ -49,6 +49,10 @@ async def run_discord_bot():
         for guild in bot.guilds:
             print(f"{guild.name} (ID: {guild.id})")
         print('------')
+        # myguild = bot.get_guild(1066347015509921852)
+        # synced = await bot.tree.sync(guild=myguild)
+        synced = await bot.tree.sync()
+        print(f"Synced {len(synced)} commands: {[cmd.name for cmd in synced]}")
 
     @bot.event
     async def on_guild_join(guild):

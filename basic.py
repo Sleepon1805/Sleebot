@@ -1,17 +1,19 @@
 import discord
 from discord.ext import commands
 
+from utils import response
+
 
 class Basic(commands.Cog):
     def __init__(self, bot):
-        self.bot = bot
+        self.bot: commands.Bot = bot
 
-    @commands.command(
-        name='server',
-        aliases=['server_info'],
-        brief="Prints details of server",
-    )
-    async def server(self, ctx):
+    @commands.hybrid_command()
+    async def server_info(
+        self,
+        ctx: commands.Context,
+    ):
+        """ Prints details of server """
         guild_name = ctx.guild.name
         owner = str(ctx.guild.owner)
         region = str(ctx.guild.region) if hasattr(ctx.guild, "region") else ""
@@ -31,30 +33,30 @@ class Basic(commands.Cog):
         embed.add_field(name="Server ID", value=guild_id, inline=True)
         embed.add_field(name="Member Count", value=memberCount, inline=True)
 
-        await ctx.send(embed=embed)
+        await response(ctx, embed=embed)
 
-    @commands.command(
-        name='hello',
-        brief="Introduces Sleebot",
-    )
-    async def hello(self, ctx):
-        text = "Hello! My name is Sleebot! Contact @Sleepon for any questions."
-        await ctx.send(text)
+    @commands.hybrid_command()
+    async def raise_exception(
+        self,
+        ctx: commands.Context,
+        e: str = None
+    ):
+        """
+        Raise and print an exception
+        Args:
+            ctx: discord ctx object
+            e: Error message
+        """
+        if e is None:
+            e = "ManualException"
+        await response(ctx, f"Manually raised exception: {e}")
+        raise commands.CommandError(e)
 
-    @commands.command(
-        name='pm',
-        brief="Sends a message to your personal messages",
-    )
-    async def pm(self, ctx):
-        await ctx.author.send('Hello! Type !help to get list of available commands.')
-
-    @commands.command(
-        name='raise_exception',
-        aliases=['raise'],
-        brief="Prints and raises an exception",
-        hidden=True,
-    )
-    async def raise_exception(self, ctx, msg: str = None):
-        if msg is None:
-            msg = "Manually raised Exception"
-        raise commands.CommandError(msg)
+    @commands.hybrid_command()
+    async def invite_link(
+        self,
+        ctx: commands.Context,
+    ):
+        """ Prints the invitation link for the bot """
+        link = f"https://discord.com/oauth2/authorize?client_id={self.bot.application_id}"
+        await response(ctx, f"Invite me to your server by calling this link:\n {link}")

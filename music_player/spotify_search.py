@@ -1,3 +1,4 @@
+import os
 import logging
 from typing import Optional, Dict, List
 
@@ -7,6 +8,7 @@ import spotipy
 
 class SpotifyHandler:
     def __init__(self):
+        os.makedirs('cache', exist_ok=True)
         self.spotify = spotipy.Spotify(
             client_credentials_manager=SpotifyClientCredentials(
                 cache_handler=spotipy.cache_handler.CacheFileHandler(cache_path='cache/spotify.cache')

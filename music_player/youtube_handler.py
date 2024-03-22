@@ -1,8 +1,8 @@
 import os
 import asyncio
 from functools import partial
-
 import discord
+from discord.ext import commands
 from yt_dlp import YoutubeDL
 
 
@@ -55,7 +55,7 @@ class YTDLSource(discord.PCMVolumeTransformer):
             os.remove(self.source)
 
     @classmethod
-    async def create_audiosource(cls, ctx, url: str, *, loop, download=False):
+    async def create_audiosource(cls, ctx: commands.Context, url: str, *, loop, download=False):
         loop = loop or asyncio.get_event_loop()
 
         to_run = partial(ytdl.extract_info, url=url, download=download)
@@ -78,15 +78,3 @@ class YTDLSource(discord.PCMVolumeTransformer):
         data = await loop.run_in_executor(None, to_run)
         urls = [entry['url'] for entry in data['entries']]
         return urls
-
-    @classmethod
-    async def regather_stream(cls, data, *, loop):
-        """Used for preparing a stream, instead of downloading.
-        Since Youtube Streaming links expire."""
-        loop = loop or asyncio.get_event_loop()
-        requester = data['requester']
-
-        to_run = partial(ytdl.extract_info, url=data['webpage_url'], download=False)
-        data = await loop.run_in_executor(None, to_run)
-
-        return cls(discord.FFmpegPCMAudio(data['url']), data=data, requester=requester, source=data)

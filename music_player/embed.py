@@ -7,8 +7,8 @@ from music_player.youtube_handler import YTDLSource
 
 class PlayerEmbed:
     def __init__(self):
-        self.embed = None  # discord.Embed about current player status
-        self.msg = None  # object of message with self.embed
+        self.embed: discord.Embed | None = None  # discord.Embed about current player status
+        self.msg: discord.Message | None = None  # object of message with self.embed
 
     async def update(
             self,
@@ -57,10 +57,14 @@ class PlayerEmbed:
         if self.msg:
             await self.msg.edit(embed=self.embed)
 
-    async def resend_msg(self, ctx):
+    async def resend_msg(self, ctx, reply: bool = False):
+        """ Resend self.embed as a new message in text channel. """
         if self.msg:
             await self.msg.delete()
-        self.msg = await ctx.send(embed=self.embed)
+        if reply:
+            self.msg = await ctx.reply(embed=self.embed)
+        else:
+            self.msg = await ctx.channel.send(embed=self.embed)
 
     @staticmethod
     def source_to_str(source: YTDLSource):
@@ -72,6 +76,5 @@ class PlayerEmbed:
         requester_str = f'requested by `{source.requester.display_name}`'
 
         duration_str = f'({timedelta(seconds=source.data['duration'])})'
-        duration_str = duration_str[2:] if duration_str.startswith('0:') else duration_str  # FIXME
 
         return ' '.join([song_str, requester_str, duration_str])

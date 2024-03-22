@@ -2,48 +2,54 @@
 Source: https://gist.github.com/EvieePy/ab667b74e9758433b3eb806c53a19f34
 """
 import asyncio
-from discord.ext.commands import Cog, command
+import discord
+from discord.ext import commands
+from typing import Literal, Optional, Dict
 
 from music_player.player import MusicPlayer
 from music_player.spotify_search import SpotifyHandler
+from utils import response
 
 
-class Music(Cog):
+class Music(commands.Cog):
     """Music related commands."""
 
     __slots__ = ('bot', 'players')
 
     def __init__(self, bot):
         self.bot = bot
-        self.players = {}
+        self.players: Dict[int, MusicPlayer] = {}
 
         self.spotify_handler = SpotifyHandler()
 
-    def get_player(self, ctx) -> MusicPlayer:
-        """Retrieve the guild player, or generate one."""
+    @staticmethod
+    def get_voice_client(ctx: commands.Context) -> discord.VoiceClient | None:
+        return ctx.guild.voice_client
+
+    def get_player(self, ctx: commands.Context) -> MusicPlayer:
+        """
+        Retrieve the guild player, or generate one.
+        """
         guild_id = ctx.guild.id
         if guild_id in self.players:
             player = self.players[guild_id]
         else:
-            player = MusicPlayer(ctx)
+            player = MusicPlayer(self.bot, self.get_voice_client(ctx))
             self.players[guild_id] = player
 
         return player
 
-    @command(
-        name='connect',
-        aliases=['join'],
-        brief="Connects to your voice channel.",
-        hidden=True,
-    )
-    async def connect(self, ctx):
+    async def connect(self, ctx: commands.Context) -> Optional[str]:
+        """
+        Connect to requester voice channel.
+        """
         try:
             channel = ctx.author.voice.channel
         except AttributeError:
-            await ctx.send("Can not connect. You are not connected to any voice channel.")
-            return
+            msg = "Can not connect. You are not connected to any voice channel."
+            return msg
 
-        vc = ctx.voice_client
+        vc = self.get_voice_client(ctx)
 
         if vc:
             if vc.channel.id == channel.id:
@@ -51,68 +57,57 @@ class Music(Cog):
             try:
                 await vc.move_to(channel)
             except asyncio.TimeoutError:
-                await ctx.send(f'Moving to channel: <{channel}> timed out.')
-                return
+                msg = f'Moving to channel: <{channel}> timed out.'
+                return msg
         else:
             try:
                 await channel.connect()
-            except asyncio.TimeoutError:
-                await ctx.send(f'Connecting to channel: <{channel}> timed out.')
                 return
+            except asyncio.TimeoutError:
+                msg = f'Connecting to channel: <{channel}> timed out.'
+                return msg
 
-        await ctx.send(f'Connected to: **{channel}**', delete_after=20)
-
-    @command(
-        name='play',
-        aliases=['p', 'add', 'yt', 'youtube'],
-        brief="(Youtube) Requests a song by YT search or URL",
-        help=
+    @commands.hybrid_command(aliases=['p', 'yt', 'youtube'])
+    async def play(
+        self,
+        ctx: commands.Context,
+        query: str
+    ):
         """
-        Request a song and add it to the queue.
-        Uses YTDL to automatically search and retrieve a song.
-        !play <YT search query or URL>
+        Request a song by YouTube search or URL.
+        Args:
+            ctx: discord Context object
+            query: Search query or YouTube URL (video or playlist)
         """
-    )
-    async def play(self, ctx, *, query: str):
-        vc = ctx.voice_client
-        if not vc:
-            await ctx.invoke(self.connect)
+        msg = await self.connect(ctx)
+        if msg:
+            await response(ctx, msg)
+            return
 
         player = self.get_player(ctx)
         await player.send_new_embed_msg(ctx)
         await player.add_to_queue(ctx, query)
 
-    @command(
-        name='spotify',
-        brief="(Spotify) Requests songs based on spotify search.",
-        help=
+    @commands.hybrid_command()
+    async def spotify(
+        self,
+        ctx: commands.Context,
+        category: Literal["track", "artist", "album", "playlist"],
+        search: str,
+        limit: int = None
+    ):
         """
-        Makes a spotify search and to add YT songs to the queue.
-        !spotify [<track|artist|album|playlist>] <search_query> [limit=<number_of_songs_to_add>]
+        Make a spotify search and add YT songs to the queue.
+        Args:
+            ctx: discord Context object
+            category: Category to search for
+            search: Search query. Only exact matches are processed.
+            limit: Numer of songs to add to the queue
         """
-    )
-    async def spotify(self, ctx, *args):
-        category = None
-        limit = None
-        search = list(args)
-        for arg in args:
-            if arg in ['playlist', 'album', 'artist', 'track']:
-                category = arg
-                search.remove(arg)
-            if 'limit=' in arg or 'lim=' in arg:
-                limit = int(arg.split('=')[1])
-                search.remove(arg)
-
-        search = ' '.join(search)
-
-        vc = ctx.voice_client
-        if not vc:
-            await ctx.invoke(self.connect)
-
         item, out_msg = self.spotify_handler.process_search(search, category)
 
         if item is None:
-            await ctx.send(out_msg, delete_after=20)
+            await response(ctx, out_msg)
             return
 
         category = item['type']
@@ -128,152 +123,155 @@ class Music(Cog):
             tracks = self.spotify_handler.get_playlist_tracks(
                 item['name'], limit=limit, return_search=True)  # YouTube search queries
         else:
-            tracks = []
-            await ctx.send(f'Unknown category: {category}. Category must be one of: track, artist, album, playlist.')
-        await ctx.send(out_msg)
+            await response(ctx, f'Unknown category: {category}. Category must be one of: track, artist, album, playlist.')
+            return
 
-        player = self.get_player(ctx)
-        await player.send_new_embed_msg(ctx)
-        await player.add_to_queue(ctx, tracks)
+        await self.play(ctx, query=tracks)
 
-    @command(
-        name='recs',
-        aliases=['r', 'rec', 'recommendations'],
-        brief="(Spotify) Requests a spotify recommendations by artist",
-        help=
+    @commands.hybrid_command()
+    async def recs(
+        self,
+        ctx: commands.Context,
+        artist: str,
+        limit: int = None
+    ):
         """
-        Requests songs from spotify recommendations based on artist seed.
-        !recs <artist_name> [limit=<number_of_songs_to_add>]
+        Requests a spotify recommendations by artist.
+        Args:
+            ctx: discord Context object
+            artist: Search query. Only exact matches are processed.
+            limit: Numer of songs to add to the queue
         """
-    )
-    async def recs(self, ctx, *args):
-        limit = None
-        search = list(args)
-        for arg in args:
-            if 'limit=' in arg or 'lim=' in arg:
-                limit = int(arg.split('=')[1])
-                search.remove(arg)
-
-        artist_name = ' '.join(search)
-
-        vc = ctx.voice_client
-        if not vc:
-            await ctx.invoke(self.connect)
-
-        vc = ctx.voice_client
-        if not vc:
-            await ctx.invoke(self.connect)
-
         top_tracks = self.spotify_handler.get_artist_recommendations(
-            artist_name, limit=limit, return_search=True)  # YouTube search queries
+            artist, limit=limit, return_search=True)  # YouTube search queries
 
-        player = self.get_player(ctx)
-        await player.send_new_embed_msg(ctx)
-        await player.add_to_queue(ctx, top_tracks)
+        await self.play(ctx, query=top_tracks)
 
-    @command(
-        name='pause',
-        brief="Pauses the current song",
-    )
-    async def pause(self, ctx):
-        vc = ctx.voice_client
+    @commands.hybrid_command()
+    async def pause(
+        self,
+        ctx: commands.Context,
+    ):
+        """
+        Pause the current song.
+        Args:
+            ctx: discord Context object
+        """
+        vc = self.get_voice_client(ctx)
 
         if not vc or not vc.is_playing():
-            return await ctx.send('I am not currently playing anything!', delete_after=20)
-        elif vc.is_paused():
-            return
-
-        vc.pause()
-        await ctx.send(f'**`{ctx.author}`**: Paused the song!')
-
-    @command(
-        name='resume',
-        brief="Resumes if paused",
-    )
-    async def resume(self, ctx):
-        vc = ctx.voice_client
-
-        if not vc or not vc.is_connected():
-            return await ctx.send('I am not currently playing anything!', delete_after=20)
+            await response(ctx, 'I am not currently playing anything!')
         elif not vc.is_paused():
-            return
+            vc.pause()
+            await response(ctx, f'**`{ctx.author}`**: Paused the song')
 
-        vc.resume()
-        await ctx.send(f'**`{ctx.author}`**: Resumed the song!')
-
-    @command(
-        name='skip',
-        brief="Skips the current song",
-    )
-    async def skip(self, ctx):
-        vc = ctx.voice_client
-
-        if not vc or not vc.is_connected():
-            return await ctx.send('I am not currently playing anything!', delete_after=20)
-
-        if vc.is_paused():
-            pass
-        elif not vc.is_playing():
-            return
-
-        vc.stop()
-        await ctx.send(f'**`{ctx.author}`**: Skipped the song!')
-
-    @command(
-        name='stop',
-        brief="Stops and empties the queue.",
-    )
-    async def stop(self, ctx):
-        vc = ctx.voice_client
+    @commands.hybrid_command()
+    async def resume(
+        self,
+        ctx: commands.Context,
+    ):
+        """
+        Resume if paused.
+        Args:
+            ctx: discord Context object
+        """
+        vc = self.get_voice_client(ctx)
 
         if not vc or not vc.is_connected():
-            return await ctx.send('I am not currently playing anything!', delete_after=20)
+            await response(ctx, 'I am not currently playing anything!')
+        elif vc.is_paused():
+            vc.resume()
+            await response(ctx, f'**`{ctx.author}`**: Resumed the song')
 
-        player = self.players.pop(ctx.guild.id, None)
-        if player:
-            await player.destroy()
+    @commands.hybrid_command()
+    async def skip(
+        self,
+        ctx: commands.Context,
+    ):
+        """
+        Skip the current song.
+        Args:
+            ctx: discord Context object
+        """
+        vc = self.get_voice_client(ctx)
 
-    @command(
-        name='queue',
-        aliases=['q', 's', 'np', 'status', 'playing', 'now_playing'],
-        brief="Shows a queue of upcoming songs",
-    )
-    async def queue(self, ctx):
+        if not vc or not vc.is_connected():
+            await response(ctx, 'I am not currently playing anything!')
+        else:
+            vc.stop()
+            await response(ctx, f'**`{ctx.author}`**: Skipped the song')
+
+    @commands.hybrid_command()
+    async def stop(
+        self,
+        ctx: commands.Context,
+    ):
+        """
+        Stop and empty the queue.
+        Args:
+            ctx: discord Context object
+        """
+        vc = self.get_voice_client(ctx)
+
+        if not vc or not vc.is_connected():
+            await response(ctx, 'I am not currently playing anything!')
+        else:
+            player = self.players.pop(ctx.guild.id, None)
+            if player:
+                await player.destroy()
+            await response(ctx, f'**`{ctx.author}`**: Stopped player')
+
+    @commands.hybrid_command(aliases=['q'])
+    async def queue(
+        self,
+        ctx: commands.Context,
+    ):
+        """
+        Show a queue of upcoming songs.
+        Args:
+            ctx: discord Context object
+        """
         player = self.get_player(ctx)
-        await player.send_new_embed_msg(ctx)
+        await player.send_new_embed_msg(ctx, reply=True)
 
-    @command(
-        name='shuffle',
-        brief="Shuffles a queue of upcoming songs",
-    )
-    async def shuffle(self, ctx):
+    @commands.hybrid_command()
+    async def shuffle(
+        self,
+        ctx: commands.Context,
+    ):
+        """
+        Shuffle the queue.
+        Args:
+            ctx: discord Context object
+        """
         player = self.get_player(ctx)
         player.shuffle_queue()
+        await response(ctx, f'**`{ctx.author}`**: Shuffled the queue')
         await player.send_new_embed_msg(ctx)
 
-    @command(
-        name='volume',
-        aliases=['v', 'vol'],
-        brief="Changes the player volume.",
-        help=
+    @commands.hybrid_command()
+    async def change_volume(
+        self,
+        ctx: commands.Context,
+        volume: float
+    ):
         """
-        Changes the player volume
-        volume: float or int: The volume to set the player to in percentage. This must be between 1 and 100.
+        Change the player volume.
+        Args:
+            ctx: discord Context object
+            volume: Percentage value between 1 and 100
         """
-    )
-    async def change_volume(self, ctx, *, volume: float):
-        vc = ctx.voice_client
+        vc = self.get_voice_client(ctx)
 
         if not vc or not vc.is_connected():
-            return await ctx.send('I am not currently connected to voice!', delete_after=20)
+            await response(ctx, 'I am not currently connected to voice!')
+        elif not 1 <= volume <= 100:
+            await response(ctx, 'Please enter a value between 1 and 100.')
+        else:
+            player = self.get_player(ctx)
 
-        if not 1 <= volume <= 100:
-            return await ctx.send('Please enter a value between 1 and 100.')
+            if vc.source:
+                vc.source.volume = volume / 100
 
-        player = self.get_player(ctx)
-
-        if vc.source:
-            vc.source.volume = volume / 100
-
-        player.volume = volume / 100
-        await ctx.send(f'**`{ctx.author}`**: Set the volume to **{volume}%**')
+            player.volume = volume / 100
+            await response(ctx, f'**`{ctx.author}`**: Set the volume to **{volume}%**')

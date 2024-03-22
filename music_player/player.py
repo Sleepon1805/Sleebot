@@ -104,6 +104,7 @@ class MusicPlayer:
 
     async def destroy(self):
         """Disconnect and cleanup the player."""
+        await self.update_embed()
 
         # delete all downloaded audiofiles
         queue = self.get_queue_items()

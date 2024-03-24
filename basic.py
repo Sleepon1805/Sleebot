@@ -1,5 +1,5 @@
 import discord
-from discord.ext import commands
+from discord.ext import commands, tasks
 
 from utils import response
 
@@ -60,3 +60,30 @@ class Basic(commands.Cog):
         """ Prints the invitation link for the bot """
         link = f"https://discord.com/oauth2/authorize?client_id={self.bot.application_id}"
         await response(ctx, f"Invite me to your server by calling this link:\n {link}")
+
+    @commands.hybrid_command()
+    async def timer(
+        self,
+        ctx: commands.Context,
+        seconds: int,
+        event_name: str = None
+    ):
+        """
+        Start a timer
+        Args:
+            ctx: discord ctx object
+            seconds: Number of seconds to count down
+            event_name: Name of the event to count down to
+        """
+        timer_name = f"Timer till {event_name}" if event_name else "Timer"
+        if event_name:
+            message = await ctx.send(f"Starting {timer_name} ({seconds} sec)")
+        else:
+            message = await ctx.send(f"Starting {timer_name} ({seconds} sec)")
+
+        @tasks.loop(seconds=1, count=seconds)
+        async def timer_loop():
+            await message.edit(content=f"{timer_name}: {seconds - timer_loop.current_loop}")
+
+        await timer_loop.start()
+        await message.edit(content=f"{event_name} has started!" if event_name else "Timer has ended")

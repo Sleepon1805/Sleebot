@@ -82,18 +82,22 @@ class MusicPlayer:
         else:
             song_queries = [query]
 
-        msg = await ctx.send(f'```Adding {len(song_queries)} songs to the queue:```')
+        msg = await ctx.send(f'```Processed 0/{len(song_queries)} songs:```')
 
-        for q in song_queries:
+        for i, q in enumerate(song_queries):
+            msg = await msg.edit(
+                content=msg.content.replace(f'{i}/{len(song_queries)}', f'{i+1}/{len(song_queries)}')
+            )
             try:
                 audiosource = await YTDLSource.create_audiosource(
                     ctx, q, loop=self.bot.loop, download=self.download)
                 await self.queue.put(audiosource)
                 await self.update_embed()
-                msg = await msg.edit(content=msg.content[:-3] + f'\nAdded {q}```')
             except Exception as e:
                 logging.warning(e)  # FIXME logging format
-                msg = await msg.edit(content=msg.content[:-3] + f'\nCould not add {q}```')
+                msg = await msg.edit(
+                    content=msg.content[:-3] + f'\n* Could not add {q}```'
+                )
 
     async def destroy(self):
         """Disconnect and cleanup the player."""

@@ -55,7 +55,10 @@ class PlayerEmbed:
 
         # edit existing message
         if self.msg:
-            await self.msg.edit(embed=self.embed)
+            try:
+                await self.msg.edit(embed=self.embed)
+            except discord.HTTPException:
+                self.msg = None
 
     async def resend_msg(self, ctx, reply: bool = False):
         """ Resend self.embed as a new message in text channel. """

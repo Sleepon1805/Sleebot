@@ -65,7 +65,14 @@ async def run_discord_bot():
 
     @bot.before_invoke
     async def before_invoke(ctx):
-        msg = f"Received command: {ctx.message.content} from {ctx.author.name} in {ctx.guild.name}"
+        if hasattr(ctx, 'interaction'):
+            msg = (f"Received slash command {ctx.interaction.data['name']} "
+                   f"with options: ")
+            for opt in ctx.interaction.data['options']:
+                msg += opt['name'] + ': ' + opt['value'] + ' '
+        else:
+            msg = f"Received command: {ctx.message.content} "
+        msg += f"from {ctx.author.name} in {ctx.guild.name}"
         logging.warning(msg)
 
     load_dotenv()

@@ -87,3 +87,31 @@ class Basic(commands.Cog):
 
         await timer_loop.start()
         await message.edit(content=f"{event_name} has started!" if event_name else "Timer has ended")
+
+    @discord.app_commands.command(name='help')
+    async def help_msg(self, interaction: discord.Interaction):
+        """
+        Show help menu
+        """
+        embed = discord.Embed(
+            title=f'Help Menu',
+            description='All listed commands can be called with a slash command or with a prefix "!"',
+            color=discord.Color.blurple()
+        )
+        embed.set_thumbnail(
+            url=self.bot.user.avatar.url
+        )
+
+        for slash_command in self.bot.tree.walk_commands():
+            if isinstance(slash_command, commands.hybrid.HybridAppCommand):
+                name = f"/{slash_command.name} | !{slash_command.name}"
+            else:
+                name = slash_command.name
+            description = slash_command.description if slash_command.description else slash_command.name
+            for p in slash_command.parameters:
+                description += f"\n• {p.display_name} ({p.type.name}): {p.description}"
+            embed.add_field(name=name,
+                            value=description,
+                            inline=False)
+
+        await response(interaction, embed=embed)

@@ -11,7 +11,6 @@ from typing import List
 
 from music_player.youtube_handler import YTDLSource
 from music_player.embed import PlayerEmbed
-from utils import response
 
 
 class MusicPlayer:
@@ -45,59 +44,62 @@ class MusicPlayer:
 
             try:
                 # Wait for the next song. If we timeout cancel the player and disconnect...
-                async with timeout(300):  # 5 minutes...
-                    source = await self.queue.get()
+                async with timeout(60):
+                    source: YTDLSource = await self.queue.get()
             except asyncio.TimeoutError:
                 await self.destroy()
                 return
 
-            source.volume = self.volume
             self.current = source
 
             if self.vc is None:
                 continue
             else:
-                self.vc.play(
-                    source,
-                    after=lambda _: self.bot.loop.call_soon_threadsafe(self.next.set)
-                )
+                try:
+                    await source.get_audiosource(self.bot.loop)
+                    source.audiosource.volume = self.volume
+                    self.vc.play(
+                        source.audiosource,
+                        after=lambda _: self.bot.loop.call_soon_threadsafe(self.next.set)
+                    )
+                except Exception as e:
+                    logging.warning(e)
+                    continue
 
             await self.update_embed()
             await self.next.wait()
 
-            # Make sure the FFmpeg process is cleaned up.
-            source.delete_cache()
-            try:
-                source.cleanup()  # FIXME
-            except Exception as e:
-                logging.warning(f'Failed to cleanup FFmpeg process: {e}')
+            source.cleanup()
 
             self.current = None
 
     async def add_to_queue(self, ctx: commands.Context, query: str | List[str]):
         if isinstance(query, list):
-            song_queries = query
+            sources = [await YTDLSource.init_from_url(q, self.download, self.bot.loop, ctx) for q in query]
         elif "playlist?list=" in query:
-            song_queries = await YTDLSource.extract_urls_from_playlist(query, self.bot.loop)
+            sources = await YTDLSource.init_from_playlist(query, self.download, self.bot.loop, ctx)
         else:
-            song_queries = [query]
+            sources = [await YTDLSource.init_from_url(query, self.download, self.bot.loop, ctx)]
 
-        msg = await ctx.send(f'```Processed 0/{len(song_queries)} songs:```')
+        msg = await ctx.send(f'```Processed 0/{len(sources)} songs```')
 
-        for i, q in enumerate(song_queries):
+        for i, s in enumerate(sources):
             msg = await msg.edit(
-                content=msg.content.replace(f'{i}/{len(song_queries)}', f'{i+1}/{len(song_queries)}')
+                content=msg.content.replace(f'{i}/{len(sources)}', f'{i+1}/{len(sources)}')
             )
-            try:
-                audiosource = await YTDLSource.create_audiosource(
-                    ctx, q, loop=self.bot.loop, download=self.download)
-                await self.queue.put(audiosource)
-                await self.update_embed()
-            except Exception as e:
-                logging.warning(e)  # FIXME logging format
+            if not s.check():
                 msg = await msg.edit(
-                    content=msg.content[:-3] + f'\n* Could not add {q}```'
+                    content=msg.content[:-3] + f'\n- Could not add {s.webpage_url}```'
                 )
+            else:
+                try:
+                    await self.queue.put(s)
+                    await self.update_embed()
+                except Exception as e:
+                    logging.warning(e)
+                    msg = await msg.edit(
+                        content=msg.content[:-3] + f'\n- Could not add {s.webpage_url}```'
+                    )
 
     async def destroy(self):
         """Disconnect and cleanup the player."""
@@ -106,7 +108,7 @@ class MusicPlayer:
         # delete all downloaded audiofiles
         queue = self.get_queue_items()
         for source in queue:
-            source.delete_cache()
+            source.cleanup()
         # clear queue
         self.queue = asyncio.Queue()
 

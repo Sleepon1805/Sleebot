@@ -12,5 +12,5 @@ SPOTIPY_REDIRECT_URI=""
 
 TODO:
 - Rename /help_msg to /help
-- Download song right before playing it
 - Fix issue with expired message links
+- Add standard (voice channel) check for all commands

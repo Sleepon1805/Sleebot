@@ -22,7 +22,7 @@ class PlayerEmbed:
             channel_playing = ' in ' + channel.name if channel else ''
             embed = discord.Embed(
                 title=f'Now Playing' + channel_playing,
-                description=f'{current_str}\n [{current.web_url}]',
+                description=f'{current_str}\n [{current.webpage_url}]',
                 color=discord.Color.blue()
             )
             if 'thumbnail' in current.data:
@@ -47,7 +47,7 @@ class PlayerEmbed:
             )
 
             # footer: remaining time
-            queue_time = sum([source.data['duration'] for source in queue])
+            queue_time = sum([source.duration for source in queue])
             embed.set_footer(text="Estimated queue time: " + str(timedelta(seconds=queue_time)))
 
         # update self
@@ -78,6 +78,9 @@ class PlayerEmbed:
 
         requester_str = f'requested by `{source.requester.display_name}`'
 
-        duration_str = f'({timedelta(seconds=source.data['duration'])})'
+        if 'duration' in source.data:
+            duration_str = f'({timedelta(seconds=source.duration)})'
+        else:
+            duration_str = ''
 
         return ' '.join([song_str, requester_str, duration_str])

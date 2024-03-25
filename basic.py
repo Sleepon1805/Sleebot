@@ -109,7 +109,7 @@ class Basic(commands.Cog):
                 name = slash_command.name
             description = slash_command.description if slash_command.description else slash_command.name
             for p in slash_command.parameters:
-                description += f"\n• {p.display_name} ({p.type.name}): {p.description}"
+                description += f"\n- {p.display_name} ({p.type.name}): {p.description}"
             embed.add_field(name=name,
                             value=description,
                             inline=False)

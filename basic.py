@@ -104,6 +104,10 @@ class Basic(commands.Cog):
         for ind, slash_command in enumerate(self.bot.tree.walk_commands()):
             if isinstance(slash_command, commands.hybrid.HybridAppCommand):
                 name = f"/{slash_command.name} | !{slash_command.name}"
+            elif isinstance(slash_command, discord.app_commands.Command):
+                name = f"/{slash_command.name}"
+            elif isinstance(slash_command, commands.Command):
+                name = f"!{slash_command.name}"
             else:
                 name = slash_command.name
             description = slash_command.description if slash_command.description else slash_command.name

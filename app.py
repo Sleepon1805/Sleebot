@@ -8,6 +8,7 @@ from discord.ext import commands
 
 from basic import Basic
 from music_player.music import Music
+from utils import send
 
 
 def setup_logging():
@@ -61,15 +62,16 @@ async def run_discord_bot():
     @bot.event
     async def on_command_error(ctx, error):
         logging.error(error)
-        await ctx.send(error)
+        await send(ctx, error)
 
     @bot.before_invoke
     async def before_invoke(ctx):
-        if hasattr(ctx, 'interaction'):
+        if ctx.interaction is not None:
             msg = (f"Received slash command {ctx.interaction.data['name']} "
                    f"with options: ")
-            for opt in ctx.interaction.data['options']:
-                msg += opt['name'] + ': ' + opt['value'] + ' '
+            if 'options' in ctx.interaction.data:
+                for opt in ctx.interaction.data['options']:
+                    msg += opt['name'] + ': ' + str(opt['value']) + ' '
         else:
             msg = f"Received command: {ctx.message.content} "
         msg += f"from {ctx.author.name} in {ctx.guild.name}"

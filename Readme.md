@@ -12,5 +12,5 @@ SPOTIPY_REDIRECT_URI=""
 
 TODO:
 - Rename /help_msg to /help
-- Fix issue with expired message links
 - Add standard (voice channel) check for all commands
+- Add 'random' command group

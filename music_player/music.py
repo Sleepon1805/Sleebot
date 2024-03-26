@@ -8,7 +8,7 @@ from typing import Literal, Optional, Dict
 
 from music_player.player import MusicPlayer
 from music_player.spotify_search import SpotifyHandler
-from utils import response
+from utils import response, edit, send
 
 
 class Music(commands.Cog):
@@ -232,7 +232,8 @@ class Music(commands.Cog):
             ctx: discord Context object
         """
         player = self.get_player(ctx)
-        await player.send_new_embed_msg(ctx, reply=True)
+        await response(ctx, 'Queue:')
+        await player.send_new_embed_msg(ctx)
 
     @commands.hybrid_command()
     async def shuffle(

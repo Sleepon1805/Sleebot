@@ -3,6 +3,7 @@ from typing import Optional, List
 import discord
 
 from music_player.youtube_handler import YTDLSource
+from utils import send, edit
 
 
 class PlayerEmbed:
@@ -55,19 +56,13 @@ class PlayerEmbed:
 
         # edit existing message
         if self.msg:
-            try:
-                await self.msg.edit(embed=self.embed)
-            except discord.HTTPException:
-                self.msg = None
+            await edit(self.msg, embed=self.embed)
 
-    async def resend_msg(self, ctx, reply: bool = False):
+    async def resend_msg(self, ctx):
         """ Resend self.embed as a new message in text channel. """
         if self.msg:
             await self.msg.delete()
-        if reply:
-            self.msg = await ctx.reply(embed=self.embed)
-        else:
-            self.msg = await ctx.channel.send(embed=self.embed)
+        self.msg = await send(ctx, embed=self.embed)
 
     @staticmethod
     def source_to_str(source: YTDLSource):

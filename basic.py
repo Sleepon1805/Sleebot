@@ -1,7 +1,7 @@
 import discord
 from discord.ext import commands, tasks
 
-from utils import response
+from utils import response, edit, send
 
 
 class Basic(commands.Cog):
@@ -76,17 +76,15 @@ class Basic(commands.Cog):
             event_name: Name of the event to count down to
         """
         timer_name = f"Timer till {event_name}" if event_name else "Timer"
-        if event_name:
-            message = await ctx.send(f"Starting {timer_name} ({seconds} sec)")
-        else:
-            message = await ctx.send(f"Starting {timer_name} ({seconds} sec)")
+        await response(ctx, f"Starting {timer_name} ({seconds} sec)")
+        message = await send(ctx, f"Starting {timer_name} ({seconds} sec)")
 
         @tasks.loop(seconds=1, count=seconds)
         async def timer_loop():
-            await message.edit(content=f"{timer_name}: {seconds - timer_loop.current_loop}")
+            await edit(message, content=f"{timer_name}: {seconds - timer_loop.current_loop}")
 
         await timer_loop.start()
-        await message.edit(content=f"{event_name} has started!" if event_name else "Timer has ended")
+        await edit(message, content=f"{event_name} has started!" if event_name else "Timer has ended")
 
     @discord.app_commands.command(name='help')
     async def help_msg(self, interaction: discord.Interaction):
@@ -95,22 +93,23 @@ class Basic(commands.Cog):
         """
         embed = discord.Embed(
             title=f'Help Menu',
-            description='All listed commands can be called with a slash command or with a prefix "!"',
+            description='If you want to run a command with "!" and multiple arguments, you can use\n'
+                        '```!<command_name> "<arg1>" "<arg2>" "<arg3>"```',
             color=discord.Color.blurple()
         )
         embed.set_thumbnail(
             url=self.bot.user.avatar.url
         )
 
-        for slash_command in self.bot.tree.walk_commands():
+        for ind, slash_command in enumerate(self.bot.tree.walk_commands()):
             if isinstance(slash_command, commands.hybrid.HybridAppCommand):
                 name = f"/{slash_command.name} | !{slash_command.name}"
             else:
                 name = slash_command.name
             description = slash_command.description if slash_command.description else slash_command.name
             for p in slash_command.parameters:
-                description += f"\n- {p.display_name} ({p.type.name}): {p.description}"
-            embed.add_field(name=name,
+                description += f"\n> {p.display_name} ({p.type.name}): {p.description}"
+            embed.add_field(name=f"{ind}. {name}",
                             value=description,
                             inline=False)
 

@@ -11,6 +11,7 @@ from typing import List
 
 from music_player.youtube_handler import YTDLSource
 from music_player.embed import PlayerEmbed
+from utils import send, edit
 
 
 class MusicPlayer:
@@ -81,15 +82,15 @@ class MusicPlayer:
         else:
             sources = [await YTDLSource.init_from_url(query, self.download, self.bot.loop, ctx)]
 
-        msg = await ctx.send(f'```Processed 0/{len(sources)} songs```')
+        msg = await send(ctx, f'```Processed 0/{len(sources)} songs```')
 
         for i, s in enumerate(sources):
-            msg = await msg.edit(
-                content=msg.content.replace(f'{i}/{len(sources)}', f'{i+1}/{len(sources)}')
+            msg = await edit(
+                msg, content=msg.content.replace(f'{i}/{len(sources)}', f'{i+1}/{len(sources)}')
             )
             if not s.check():
-                msg = await msg.edit(
-                    content=msg.content[:-3] + f'\n- Could not add {s.webpage_url}```'
+                msg = await edit(
+                    msg, content=msg.content[:-3] + f'\n- Could not add {s.webpage_url}```'
                 )
             else:
                 try:
@@ -97,8 +98,8 @@ class MusicPlayer:
                     await self.update_embed()
                 except Exception as e:
                     logging.warning(e)
-                    msg = await msg.edit(
-                        content=msg.content[:-3] + f'\n- Could not add {s.webpage_url}```'
+                    msg = await edit(
+                        msg, content=msg.content[:-3] + f'\n- Could not add {s.webpage_url}```'
                     )
 
     async def destroy(self):
@@ -132,7 +133,7 @@ class MusicPlayer:
             self.vc.channel
         )
 
-    async def send_new_embed_msg(self, ctx: commands.Context, reply: bool = False):
+    async def send_new_embed_msg(self, ctx: commands.Context):
         await self.update_embed()
-        await self.embed.resend_msg(ctx, reply)
+        await self.embed.resend_msg(ctx)
 

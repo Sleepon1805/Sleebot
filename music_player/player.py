@@ -11,7 +11,7 @@ from typing import List
 
 from music_player.youtube_handler import YTDLSource
 from music_player.embed import PlayerEmbed
-from utils import send, edit
+from utils import response, edit
 
 
 class MusicPlayer:
@@ -82,7 +82,7 @@ class MusicPlayer:
         else:
             sources = [await YTDLSource.init_from_url(query, self.download, self.bot.loop, ctx)]
 
-        msg = await send(ctx, f'```Processed 0/{len(sources)} songs```')
+        msg = await response(ctx, f'Processed 0/{len(sources)} songs')
 
         for i, s in enumerate(sources):
             msg = await edit(
@@ -90,7 +90,7 @@ class MusicPlayer:
             )
             if not s.check():
                 msg = await edit(
-                    msg, content=msg.content[:-3] + f'\n- Could not add {s.webpage_url}```'
+                    msg, content=msg.content + f'\n- Could not add {s.webpage_url}'
                 )
             else:
                 try:

@@ -14,3 +14,4 @@ TODO:
 - Rename /help_msg to /help
 - Add standard (voice channel) check for all commands
 - Add 'random' command group
+- Save last used commands and allow to repeat them

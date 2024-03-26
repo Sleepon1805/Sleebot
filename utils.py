@@ -7,7 +7,7 @@ async def response(ctx: discord.Interaction | commands.Context, *args, **kwargs)
         if isinstance(ctx, discord.Interaction):
             return await ctx.response.send_message(*args, **kwargs)
         else:
-            return await ctx.send(*args, **kwargs)
+            return await ctx.reply(*args, **kwargs)
     except discord.HTTPException:  # Webhook Token expires after 900 seconds
         return await send(ctx, *args, **kwargs)
 

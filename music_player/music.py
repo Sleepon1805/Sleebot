@@ -118,10 +118,10 @@ class Music(commands.Cog):
                 playlist=f"This Is {item['name']}", limit=limit, return_search=True)  # YouTube search queries
         elif category == 'album':
             tracks = self.spotify_handler.get_album_tracks(
-                item['name'], limit=limit, return_search=True)  # YouTube search queries
+                item, limit=limit, return_search=True)  # YouTube search queries
         elif category == 'playlist':
             tracks = self.spotify_handler.get_playlist_tracks(
-                item['name'], limit=limit, return_search=True)  # YouTube search queries
+                item, limit=limit, return_search=True)  # YouTube search queries
         else:
             await response(ctx, f'Unknown category: {category}. Category must be one of: track, artist, album, playlist.')
             return

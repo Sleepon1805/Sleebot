@@ -73,9 +73,6 @@ class PlayerEmbed:
 
         requester_str = f'requested by `{source.requester.display_name}`'
 
-        if 'duration' in source.data:
-            duration_str = f'({timedelta(seconds=source.duration)})'
-        else:
-            duration_str = ''
+        duration_str = f'({timedelta(seconds=source.duration)})'
 
         return ' '.join([song_str, requester_str, duration_str])

@@ -5,6 +5,7 @@ from functools import partial
 from typing import Dict
 import discord
 from yt_dlp import YoutubeDL
+from youtubesearchpython import VideosSearch
 
 
 ytdlopts = {
@@ -40,7 +41,13 @@ class YTDLSource:
 
     @property
     def title(self):
-        return self.data['title'] if 'title' in self.data else None
+        if 'title' in self.data:
+            return self.data['title']
+        elif 'original_url' in self.data:
+            # for YT search based results
+            return self.data['original_url']
+        else:
+            return None
 
     @property
     def webpage_url(self):
@@ -77,6 +84,13 @@ class YTDLSource:
             self.audiosource = self.data
 
     @classmethod
+    async def init_from_url(cls, url: str, download: bool, loop: asyncio.AbstractEventLoop, ctx):
+        to_run = partial(ytdl.extract_info, url=url, download=False, process=False)
+        data = await loop.run_in_executor(None, to_run)
+        data['requester'] = ctx.author
+        return cls(data, download)
+
+    @classmethod
     async def init_from_playlist(cls, playlist_url: str, download: bool, loop: asyncio.AbstractEventLoop, ctx):
         assert "playlist?list=" in playlist_url
         to_run = partial(ytdl.extract_info, url=playlist_url, download=False, process=False)
@@ -88,9 +102,10 @@ class YTDLSource:
         return sources
 
     @classmethod
-    async def init_from_url(cls, url: str, download: bool, loop: asyncio.AbstractEventLoop, ctx):
+    async def init_from_search(cls, query: str, download: bool, loop: asyncio.AbstractEventLoop, ctx):
         # URL can be either a search query or a direct link
-        to_run = partial(ytdl.extract_info, url=url, download=False, process=False)
+        query = query.replace(':', '')
+        to_run = partial(ytdl.extract_info, url=query, download=False, process=False)
         data = await loop.run_in_executor(None, to_run)
         data['requester'] = ctx.author
         return cls(data, download)
@@ -111,5 +126,8 @@ class YTDLSource:
     def check(self) -> bool:
         if self.title == '[Private video]':
             logging.warning(f'Private video: {self.webpage_url}')
+            return False
+        elif self.title == '[Deleted video]':
+            logging.warning(f'Deleted video: {self.webpage_url}')
             return False
         return True

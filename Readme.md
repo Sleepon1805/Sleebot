@@ -10,7 +10,7 @@ SPOTIPY_CLIENT_SECRET=""
 SPOTIPY_REDIRECT_URI=""
 ```
 
-Current list of commands:
+Current list of commands (/help):
 ```
 0. /server_info | !server_info
 Prints details of server
@@ -23,7 +23,7 @@ Prints the invitation link for the bot
 Start a timer
 seconds (integer): Number of seconds to count down
 event_name (string): Name of the event to count down to
-4. help
+4. /help | !help
 Show help menu
 5. /play | !play
 Request a song by YouTube search or URL.
@@ -59,3 +59,5 @@ TODO:
 - Add 'random' command group
 - Save last used commands and allow to repeat them
 - Add !run_tests command
+- Improve spotify search, add button controls
+- Do YT search (with youtube-search-python?) first, then get AudioSource with ytdl

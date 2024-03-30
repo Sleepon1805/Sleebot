@@ -76,7 +76,7 @@ class MusicPlayer:
 
     async def add_to_queue(self, ctx: commands.Context, query: str | List[str]):
         if isinstance(query, list):
-            sources = [await YTDLSource.init_from_url(q, self.download, self.bot.loop, ctx) for q in query]
+            sources = [await YTDLSource.init_from_search(q, self.download, self.bot.loop, ctx) for q in query]
         elif "playlist?list=" in query:
             sources = await YTDLSource.init_from_playlist(query, self.download, self.bot.loop, ctx)
         else:

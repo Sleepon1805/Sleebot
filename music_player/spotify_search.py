@@ -93,18 +93,6 @@ class SpotifyHandler:
         searches = []
         for track in tracks:
             searches.append(
-                f'{track["name"]} {track["artists"][0]["name"]}'
+                f'{track["name"]} - {track["artists"][0]["name"]}'
             )
         return searches
-
-
-if __name__ == '__main__':
-    from dotenv import load_dotenv
-    from pprint import pprint
-    load_dotenv()
-    spotify_handler = SpotifyHandler()
-
-    search_str = 'Mass Hysteria Radio'
-    output = spotify_handler.get_playlist_tracks(search_str)
-
-    pprint(output)

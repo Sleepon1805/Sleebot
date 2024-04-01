@@ -5,7 +5,6 @@ from functools import partial
 from typing import Dict
 import discord
 from yt_dlp import YoutubeDL
-from youtubesearchpython import VideosSearch
 
 
 ytdlopts = {

@@ -101,7 +101,7 @@ class Music(commands.Cog):
         Args:
             ctx: discord Context object
             category: Category to search for
-            search: Search query. Only exact matches are processed.
+            search: Search query or URL. Only exact search matches are processed.
             limit: Numer of songs to add to the queue
         """
         item, out_msg = self.spotify_handler.process_search(search, category)

@@ -55,9 +55,9 @@ volume (number): Percentage value between 1 and 100
 ```
 
 TODO:
-- Add standard (voice channel) check for all commands
 - Add 'random' command group
 - Save last used commands and allow to repeat them
 - Add !run_tests command
 - Improve spotify search, add button controls
 - Do YT search (with youtube-search-python?) first, then get AudioSource with ytdl
+- Add pagination and button control to embed queue

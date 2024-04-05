@@ -33,29 +33,42 @@ class SpotifyHandler:
             out_msg += f'Maybe you meant one of {[item['name'] for item in queried_items]}?'
         return None, out_msg
 
-    def get_album_tracks(
-            self, album: str | Dict, limit=None, return_search: bool = True
+    def process_url(self, url: str) -> (Dict | None, str):
+        if 'track' in url:
+            item = self.spotify.track(url)
+            out_msg = f'Found {item["name"]} in category tracks.'
+        elif 'album' in url:
+            item = self.spotify.album(url)
+            out_msg = f'Found {item["name"]} in category albums.'
+        elif 'artist' in url:
+            item = self.spotify.artist(url)
+            out_msg = f'Found {item["name"]} in category artists.'
+        elif 'playlist' in url:
+            item = self.spotify.playlist(url)
+            out_msg = f'Found {item["name"]} in category playlists.'
+        else:
+            item = None,
+            out_msg = f'Unknown spotify url: {url}'
+        return item, out_msg
+
+    def get_tracks_from_spotify_object(
+            self, item: Dict, category: str, limit=None, return_search: bool = True
     ) -> List[Dict] | List[str]:
-        if isinstance(album, str):
-            album, out_msg = self.process_search(album, category='album')
+        if category == 'track':
+            tracks = [item]
+        elif category == 'artist':
+            tracks = self.spotify.artist_top_tracks(item['id'])['tracks']
+        elif category == 'album':
+            tracks = self.spotify.album(item['id'])['tracks']['items']
+        elif category == 'playlist':
+            playlist_items = self.spotify.playlist_items(item['id'], limit=limit)['items']
+            tracks = [item['track'] for item in playlist_items]
+        else:
+            logging.warning(f'Unknown category: {category}. Category must be one of: track, artist, album, playlist.')
+            return []
 
-        album_tracks = self.spotify.album(album['id'])['tracks']['items']
-
-        limit = min(limit, len(album_tracks)) if limit else len(album_tracks)
-        tracks = album_tracks[:limit]
-
-        if return_search:
-            tracks = self.tracks_to_yt_searches(tracks)
-        return tracks
-
-    def get_playlist_tracks(
-            self, playlist: str | Dict, limit=None, return_search: bool = True
-    ) -> List[Dict] | List[str]:
-        if isinstance(playlist, str):
-            playlist, out_msg = self.process_search(playlist, category='playlist')
-
-        playlist_items = self.spotify.playlist_items(playlist['id'], limit=limit)['items']
-        tracks = [item['track'] for item in playlist_items]
+        limit = min(limit, len(tracks)) if limit else len(tracks)
+        tracks = tracks[:limit]
 
         if return_search:
             tracks = self.tracks_to_yt_searches(tracks)

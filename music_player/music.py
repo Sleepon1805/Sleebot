@@ -92,7 +92,7 @@ class Music(commands.Cog):
     async def spotify(
         self,
         ctx: commands.Context,
-        category: Literal["track", "artist", "album", "playlist"],
+        category: Literal["track", "artist", "album", "playlist", "link"],
         search: str,
         limit: int = None
     ):
@@ -104,27 +104,18 @@ class Music(commands.Cog):
             search: Search query or URL. Only exact search matches are processed.
             limit: Numer of songs to add to the queue
         """
-        item, out_msg = self.spotify_handler.process_search(search, category)
+        if category == 'link':
+            item, out_msg = self.spotify_handler.process_url(search)
+        else:
+            item, out_msg = self.spotify_handler.process_search(search, category)
 
         if item is None:
             await response(ctx, out_msg)
             return
 
         category = item['type']
-        if category == 'track':
-            tracks = self.spotify_handler.tracks_to_yt_searches(item)
-        elif category == 'artist':
-            tracks = self.spotify_handler.get_playlist_tracks(
-                playlist=f"This Is {item['name']}", limit=limit, return_search=True)  # YouTube search queries
-        elif category == 'album':
-            tracks = self.spotify_handler.get_album_tracks(
-                item, limit=limit, return_search=True)  # YouTube search queries
-        elif category == 'playlist':
-            tracks = self.spotify_handler.get_playlist_tracks(
-                item, limit=limit, return_search=True)  # YouTube search queries
-        else:
-            await response(ctx, f'Unknown category: {category}. Category must be one of: track, artist, album, playlist.')
-            return
+        tracks = self.spotify_handler.get_tracks_from_spotify_object(
+            item, category, limit=limit, return_search=True)
 
         await self.play(ctx, query=tracks)
 

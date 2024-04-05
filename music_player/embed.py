@@ -48,8 +48,10 @@ class PlayerEmbed:
             )
 
             # footer: remaining time
-            queue_time = sum([source.duration for source in queue])
-            embed.set_footer(text="Estimated queue time: " + str(timedelta(seconds=queue_time)))
+            queue_time = sum([source.duration for source in queue if source.duration])
+            unknown_duration = len([source for source in queue if not source.duration])
+            embed.set_footer(text="Estimated queue time: " + str(timedelta(seconds=queue_time)) + " + "
+                                  + str(unknown_duration) + " ?")
 
         # update self
         self.embed = embed
@@ -73,6 +75,6 @@ class PlayerEmbed:
 
         requester_str = f'requested by `{source.requester.display_name}`'
 
-        duration_str = f'({timedelta(seconds=source.duration)})'
+        duration_str = f'({timedelta(seconds=source.duration)})' if source.duration else ''
 
         return ' '.join([song_str, requester_str, duration_str])

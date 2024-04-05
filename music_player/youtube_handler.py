@@ -63,7 +63,7 @@ class YTDLSource:
 
     @property
     def duration(self):
-        return self.data['duration'] if 'duration' in self.data else 120
+        return self.data['duration'] if 'duration' in self.data else None
 
     async def get_audiosource(self, loop: asyncio.AbstractEventLoop):
         loop = loop or asyncio.get_event_loop()

@@ -4,10 +4,11 @@ Source: https://gist.github.com/EvieePy/ab667b74e9758433b3eb806c53a19f34
 import asyncio
 import discord
 from discord.ext import commands
-from typing import Literal, Optional, Dict
+from typing import Literal, Optional, Dict, List
 
 from music_player.player import MusicPlayer
 from music_player.spotify_search import SpotifyHandler
+from music_player.track import Track
 from utils import response, edit, send
 
 
@@ -67,6 +68,16 @@ class Music(commands.Cog):
                 msg = f'Connecting to channel: <{channel}> timed out.'
                 return msg
 
+    async def _play(self, ctx: commands.Context, tracks: List[Track]):
+        msg = await self.connect(ctx)
+        if msg:
+            await response(ctx, msg)
+            return
+
+        player = self.get_player(ctx)
+        await player.send_new_embed_msg(ctx)
+        await player.add_to_queue(ctx, tracks)
+
     @commands.hybrid_command(aliases=['p', 'yt', 'youtube'])
     async def play(
         self,
@@ -79,14 +90,15 @@ class Music(commands.Cog):
             ctx: discord Context object
             query: Search query or YouTube URL (video or playlist)
         """
-        msg = await self.connect(ctx)
-        if msg:
-            await response(ctx, msg)
-            return
+        if "youtube.com" in query or "youtu.be" in query:
+            if "playlist?list=" in query:
+                tracks = await Track.from_playlist(playlist_url=query, requester=ctx.author, loop=self.bot.loop)
+            else:
+                tracks = [await Track.from_url(url=query, requester=ctx.author, loop=self.bot.loop)]
+        else:
+            tracks = [await Track.from_search(query=query, requester=ctx.author, loop=self.bot.loop)]
 
-        player = self.get_player(ctx)
-        await player.send_new_embed_msg(ctx)
-        await player.add_to_queue(ctx, query)
+        await self._play(ctx, tracks)
 
     @commands.hybrid_command()
     async def spotify(
@@ -115,28 +127,40 @@ class Music(commands.Cog):
 
         category = item['type']
         tracks = self.spotify_handler.get_tracks_from_spotify_object(
-            item, category, limit=limit, return_search=True)
+            item, category, ctx, limit=limit, get_recommendations=False)
 
-        await self.play(ctx, query=tracks)
+        await self._play(ctx, tracks)
 
     @commands.hybrid_command()
     async def recs(
         self,
         ctx: commands.Context,
-        artist: str,
+        category: Literal["track", "artist", "album", "playlist", "link"],
+        search: str,
         limit: int = None
     ):
         """
-        Requests a spotify recommendations by artist.
+        Get spotify recommendations based on a spotify search and add YT songs to the queue.
         Args:
             ctx: discord Context object
-            artist: Search query. Only exact matches are processed.
+            category: Category to search for
+            search: Search query or URL. Only exact search matches are processed.
             limit: Numer of songs to add to the queue
         """
-        top_tracks = self.spotify_handler.get_artist_recommendations(
-            artist, limit=limit, return_search=True)  # YouTube search queries
+        if category == 'link':
+            item, out_msg = self.spotify_handler.process_url(search)
+        else:
+            item, out_msg = self.spotify_handler.process_search(search, category)
 
-        await self.play(ctx, query=top_tracks)
+        if item is None:
+            await response(ctx, out_msg)
+            return
+
+        category = item['type']
+        tracks = self.spotify_handler.get_tracks_from_spotify_object(
+            item, category, ctx, limit=limit, get_recommendations=True)
+
+        await self._play(ctx, tracks)
 
     @commands.hybrid_command()
     async def pause(

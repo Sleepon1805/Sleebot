@@ -9,7 +9,7 @@ from discord.ext import commands
 from random import shuffle
 from typing import List
 
-from music_player.youtube_handler import YTDLSource
+from music_player.track import Track, YTDLSource
 from music_player.embed import PlayerEmbed
 from utils import response, edit
 
@@ -57,7 +57,7 @@ class MusicPlayer:
                 continue
             else:
                 try:
-                    await source.get_audiosource(self.bot.loop)
+                    await source.get_yt_audiosource(self.bot.loop)
                     source.audiosource.volume = self.volume
                     self.vc.play(
                         source.audiosource,
@@ -74,33 +74,22 @@ class MusicPlayer:
 
             self.current = None
 
-    async def add_to_queue(self, ctx: commands.Context, query: str | List[str]):
-        if isinstance(query, list):
-            sources = [await YTDLSource.init_from_search(q, self.download, self.bot.loop, ctx) for q in query]
-        elif "playlist?list=" in query:
-            sources = await YTDLSource.init_from_playlist(query, self.download, self.bot.loop, ctx)
-        else:
-            sources = [await YTDLSource.init_from_url(query, self.download, self.bot.loop, ctx)]
+    async def add_to_queue(self, ctx: commands.Context, tracks: List[Track]):
+        msg = await response(ctx, f'Processed 0/{len(tracks)} songs')
 
-        msg = await response(ctx, f'Processed 0/{len(sources)} songs')
-
-        for i, s in enumerate(sources):
-            msg = await edit(
-                msg, content=msg.content.replace(f'{i}/{len(sources)}', f'{i+1}/{len(sources)}')
-            )
-            if not s.check():
+        for i, track in enumerate(tracks):
+            try:
+                source = YTDLSource(track, download=self.download)
+                await self.queue.put(source)
+                await self.update_embed()
+            except Exception as e:
+                logging.warning(e)
                 msg = await edit(
-                    msg, content=msg.content + f'\n- Could not add {s.webpage_url}'
+                    msg, content=msg.content + f'\n- Could not add {track.url}'
                 )
-            else:
-                try:
-                    await self.queue.put(s)
-                    await self.update_embed()
-                except Exception as e:
-                    logging.warning(e)
-                    msg = await edit(
-                        msg, content=msg.content[:-3] + f'\n- Could not add {s.webpage_url}```'
-                    )
+            msg = await edit(
+                msg, content=msg.content.replace(f'{i}/{len(tracks)}', f'{i+1}/{len(tracks)}')
+            )
 
     async def destroy(self):
         """Disconnect and cleanup the player."""

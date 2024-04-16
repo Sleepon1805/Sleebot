@@ -5,6 +5,8 @@ from typing import Optional, Dict, List
 from spotipy.oauth2 import SpotifyClientCredentials
 import spotipy
 
+from music_player.track import Track
+
 
 class SpotifyHandler:
     def __init__(self):
@@ -20,6 +22,8 @@ class SpotifyHandler:
             categories = [category]
         else:
             categories = ['playlist', 'album', 'artist', 'track']
+
+        queried_items = []
         for category in categories:
             results = self.spotify.search(search, type=category, limit=5)
             queried_items = results[category + 's']['items']
@@ -52,8 +56,8 @@ class SpotifyHandler:
         return item, out_msg
 
     def get_tracks_from_spotify_object(
-            self, item: Dict, category: str, limit=None, return_search: bool = True
-    ) -> List[Dict] | List[str]:
+            self, item: Dict, category: str, ctx, get_recommendations=False, limit=None
+    ) -> List[Track] | List[str]:
         if category == 'track':
             tracks = [item]
         elif category == 'artist':
@@ -67,27 +71,19 @@ class SpotifyHandler:
             logging.warning(f'Unknown category: {category}. Category must be one of: track, artist, album, playlist.')
             return []
 
+        if get_recommendations:
+            rec_limit = min(len(tracks), 5)  # max 5 seed tracks
+            recommendations = self.spotify.recommendations(
+                seed_tracks=[track['id'] for track in tracks[:rec_limit]],
+                limit=limit
+            )
+            tracks = recommendations['tracks']
+
         limit = min(limit, len(tracks)) if limit else len(tracks)
         tracks = tracks[:limit]
 
-        if return_search:
-            tracks = self.tracks_to_yt_searches(tracks)
+        tracks = self.extract_info_from_spotify_tracks(tracks, ctx)
         return tracks
-
-    def get_artist_recommendations(
-            self, artist_name: str, limit=None, return_search: bool = True
-    ) -> List[Dict] | List[str]:
-        artist = self._get_artist_by_name(artist_name)
-
-        if artist is None:
-            logging.warning(f'No artist found for {artist_name}')
-            return []
-
-        recommendations = self.spotify.recommendations(seed_artists=[artist['id']], limit=limit)['tracks']
-
-        if return_search:
-            recommendations = self.tracks_to_yt_searches(recommendations)
-        return recommendations
 
     def _get_artist_by_name(self, artist_name: str) -> Optional[Dict]:
         searched_artists = self.spotify.search(artist_name, type='artist')['artists']['items']
@@ -100,12 +96,18 @@ class SpotifyHandler:
         return artist
 
     @staticmethod
-    def tracks_to_yt_searches(tracks: List[Dict] | Dict) -> List[str]:
-        if isinstance(tracks, dict):
-            tracks = [tracks]
-        searches = []
-        for track in tracks:
-            searches.append(
-                f'{track["name"]} - {track["artists"][0]["name"]}'
+    def extract_info_from_spotify_tracks(songs: List[Dict] | Dict, ctx) -> List[Track]:
+        if isinstance(songs, dict):
+            songs = [songs]
+        tracks = []
+        for song in songs:
+            track = Track(
+                title=song['name'],
+                duration=int(song['duration_ms'] / 1000),
+                requester=ctx.author,
+                artist=song['artists'][0]['name'],
+                url=None,
+                thumbnail=None,
             )
-        return searches
+            tracks.append(track)
+        return tracks

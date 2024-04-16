@@ -70,11 +70,13 @@ async def run_discord_bot():
             msg = (f"Received slash command /{ctx.interaction.data['name']} "
                    f"with options: ")
             if 'options' in ctx.interaction.data:
-                for opt in ctx.interaction.data['options']:
-                    msg += opt['name'] + ': ' + str(opt['value']) + ' '
+                msg += ', '.join(
+                    opt['name'] + ': ' + str(opt['value'])
+                    for opt in ctx.interaction.data['options']
+                )
         else:
-            msg = f"Received command: {ctx.message.content} "
-        msg += f"(from {ctx.author.name} in {ctx.guild.name})"
+            msg = f"Received command: {ctx.message.content}"
+        msg += f" (from {ctx.author.name} in {ctx.guild.name})"
         logging.warning(msg)
 
     load_dotenv()

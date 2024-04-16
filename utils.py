@@ -16,6 +16,8 @@ async def response(ctx: discord.Interaction | commands.Context, *args, **kwargs)
 
 async def edit(msg: discord.Message, *args, **kwargs):
     try:
+        if 'allowed_mentions' not in kwargs:
+            kwargs['allowed_mentions'] = discord.AllowedMentions.none()
         return await msg.edit(*args, **kwargs)
     except discord.HTTPException:  # Webhook Token expires after 900 seconds
         return await msg.channel.send(*args, **kwargs)

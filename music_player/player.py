@@ -9,7 +9,7 @@ from discord.ext import commands
 from random import shuffle
 from typing import List
 
-from music_player.track import Track, YTDLSource
+from music_player.youtube_handler import Track
 from music_player.embed import PlayerEmbed
 from utils import response, edit
 
@@ -46,21 +46,21 @@ class MusicPlayer:
             try:
                 # Wait for the next song. If we timeout cancel the player and disconnect...
                 async with timeout(60):
-                    source: YTDLSource = await self.queue.get()
+                    track: Track = await self.queue.get()
             except asyncio.TimeoutError:
                 await self.destroy()
                 return
 
-            self.current = source
+            self.current = track
 
             if self.vc is None:
                 continue
             else:
                 try:
-                    await source.get_yt_audiosource(self.bot.loop)
-                    source.audiosource.volume = self.volume
+                    await track.get_audiosource(self.bot.loop)
+                    track.audiosource.volume = self.volume
                     self.vc.play(
-                        source.audiosource,
+                        track.audiosource,
                         after=lambda _: self.bot.loop.call_soon_threadsafe(self.next.set)
                     )
                 except Exception as e:
@@ -70,25 +70,29 @@ class MusicPlayer:
             await self.update_embed()
             await self.next.wait()
 
-            source.cleanup()
-
+            track.cleanup()
             self.current = None
 
-    async def add_to_queue(self, ctx: commands.Context, tracks: List[Track]):
-        msg = await response(ctx, f'Processed 0/{len(tracks)} songs')
+    async def add_to_queue(self, ctx: commands.Context, queries: List[str]):
+        msg = await response(ctx, 'Processing your query...')
 
-        for i, track in enumerate(tracks):
+        urls = []
+        for query in queries:
+            urls.extend(await Track.get_urls(query))
+        msg = await edit(msg, content=f'Processed 0/{len(urls)} tracks')
+
+        for i, url in enumerate(urls):
             try:
-                source = YTDLSource(track, download=self.download)
-                await self.queue.put(source)
+                track = await Track.from_url(url, loop=self.bot.loop, ctx=ctx)
+                await self.queue.put(track)
                 await self.update_embed()
             except Exception as e:
                 logging.warning(e)
                 msg = await edit(
-                    msg, content=msg.content + f'\n- Could not add {track.url}'
+                    msg, content=msg.content + f'\n- Could not add {url}'
                 )
             msg = await edit(
-                msg, content=msg.content.replace(f'{i}/{len(tracks)}', f'{i+1}/{len(tracks)}')
+                msg, content=msg.content.replace(f'{i}/{len(urls)}', f'{i+1}/{len(urls)}')
             )
 
     async def destroy(self):
@@ -101,11 +105,15 @@ class MusicPlayer:
             source.cleanup()
         # clear queue
         self.queue = asyncio.Queue()
+        await self.update_embed()
 
         try:
             await self.vc.disconnect()
         except AttributeError:
             pass
+
+        if self.vc.guild.id in self.bot.cogs['Music'].players:
+            del self.bot.cogs['Music'].players[self.vc.guild.id]
 
     def get_queue_items(self):
         # FIXME

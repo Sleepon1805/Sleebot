@@ -3,3 +3,4 @@ discord.py[voice]
 python-dotenv
 yt_dlp
 spotipy
+pytube

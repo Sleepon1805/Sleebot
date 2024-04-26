@@ -8,7 +8,7 @@ from typing import Literal, Optional, Dict, List
 
 from music_player.player import MusicPlayer
 from music_player.spotify_search import SpotifyHandler
-from music_player.track import Track
+from music_player.youtube_handler import Track
 from utils import response, edit, send
 
 
@@ -68,7 +68,7 @@ class Music(commands.Cog):
                 msg = f'Connecting to channel: <{channel}> timed out.'
                 return msg
 
-    async def _play(self, ctx: commands.Context, tracks: List[Track]):
+    async def _play(self, ctx: commands.Context, queries: List[str]):
         msg = await self.connect(ctx)
         if msg:
             await response(ctx, msg)
@@ -76,7 +76,7 @@ class Music(commands.Cog):
 
         player = self.get_player(ctx)
         await player.send_new_embed_msg(ctx)
-        await player.add_to_queue(ctx, tracks)
+        await player.add_to_queue(ctx, queries)
 
     @commands.hybrid_command(aliases=['p', 'yt', 'youtube'])
     async def play(
@@ -90,15 +90,7 @@ class Music(commands.Cog):
             ctx: discord Context object
             query: Search query or YouTube URL (video or playlist)
         """
-        if "youtube.com" in query or "youtu.be" in query:
-            if "playlist?list=" in query:
-                tracks = await Track.from_playlist(playlist_url=query, requester=ctx.author, loop=self.bot.loop)
-            else:
-                tracks = [await Track.from_url(url=query, requester=ctx.author, loop=self.bot.loop)]
-        else:
-            tracks = [await Track.from_search(query=query, requester=ctx.author, loop=self.bot.loop)]
-
-        await self._play(ctx, tracks)
+        await self._play(ctx, [query])
 
     @commands.hybrid_command()
     async def spotify(
@@ -126,10 +118,10 @@ class Music(commands.Cog):
             return
 
         category = item['type']
-        tracks = self.spotify_handler.get_tracks_from_spotify_object(
+        queries = self.spotify_handler.get_queries_from_spotify_object(
             item, category, ctx, limit=limit, get_recommendations=False)
 
-        await self._play(ctx, tracks)
+        await self._play(ctx, queries)
 
     @commands.hybrid_command()
     async def recs(
@@ -157,10 +149,10 @@ class Music(commands.Cog):
             return
 
         category = item['type']
-        tracks = self.spotify_handler.get_tracks_from_spotify_object(
+        queries = self.spotify_handler.get_queries_from_spotify_object(
             item, category, ctx, limit=limit, get_recommendations=True)
 
-        await self._play(ctx, tracks)
+        await self._play(ctx, queries)
 
     @commands.hybrid_command()
     async def pause(

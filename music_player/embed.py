@@ -2,7 +2,7 @@ from datetime import timedelta
 from typing import Optional, List
 import discord
 
-from music_player.track import Track
+from music_player.youtube_handler import Track
 from utils import send, edit
 
 
@@ -23,7 +23,7 @@ class PlayerEmbed:
             channel_playing = ' in ' + channel.name if channel else ''
             embed = discord.Embed(
                 title=f'Now Playing' + channel_playing,
-                description=f'{current_str}\n [{current.url}]',
+                description=f'{current_str}\n [{current.yt_url}]',
                 color=discord.Color.blue()
             )
             if current.thumbnail is not None:
@@ -48,9 +48,9 @@ class PlayerEmbed:
             )
 
             # footer: remaining time
-            queue_time = sum([source.duration for source in queue if source.duration])
+            queue_time = sum([track.duration for track in queue if track.duration])
             footer_text = "Estimated queue time: " + str(timedelta(seconds=queue_time))
-            unknown_duration = len([source for source in queue if not source.duration])
+            unknown_duration = len([track for track in queue if not track.duration])
             if unknown_duration > 0:
                 footer_text += " + " + str(unknown_duration) + " x unknown"
             embed.set_footer(text=footer_text)

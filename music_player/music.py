@@ -228,6 +228,26 @@ class Music(commands.Cog):
                 await player.destroy()
             await response(ctx, f'**`{ctx.author}`**: Stopped player')
 
+    @commands.hybrid_command()
+    async def restart(
+            self,
+            ctx: commands.Context,
+    ):
+        """
+        Save the queue and restart the player
+        Args:
+            ctx: discord Context object
+        """
+        player = self.get_player(ctx)
+        songs: List[Track] = []
+        if player.current:
+            songs.append(player.current)
+        if len(player.get_queue_items()) > 0:
+            songs.extend(player.get_queue_items())
+        await self.stop(ctx)
+        if len(songs) > 0:
+            await self._play(ctx, [song.yt_url for song in songs])
+
     @commands.hybrid_command(aliases=['q'])
     async def queue(
         self,

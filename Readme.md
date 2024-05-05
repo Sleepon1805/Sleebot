@@ -61,4 +61,3 @@ TODO:
 - Improve spotify search, add button controls
 - Do YT search (with youtube-search-python?) first, then get AudioSource with ytdl
 - Add pagination and button control to embed queue
-- Parallelize Track.get_urls()

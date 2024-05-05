@@ -107,6 +107,9 @@ class MusicPlayer:
         except AttributeError:
             pass
 
+        if self.vc.guild.id in self.bot.cogs['Music'].players:
+            self.bot.cogs['Music'].players.pop(self.vc.guild.id)
+
     def get_queue_items(self):
         # FIXME
         return list(self.queue._queue)

@@ -254,7 +254,7 @@ class Music(commands.Cog):
             songs.extend(player.get_queue_items())
         await self.stop(ctx)
         if len(songs) > 0:
-            await self._play(ctx, [song.yt_url for song in songs])
+            await self._play(ctx, songs)
 
     @commands.hybrid_command(aliases=['q'])
     async def queue(

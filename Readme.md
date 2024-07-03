@@ -1,4 +1,4 @@
-This is a simple discord bot, that plays audio from youtube links in a voice channel. It uses the discord.py library and youtube-dl to download the audio from youtube.
+This is a simple discord bot, that plays audio from youtube in a voice channel. It uses the discord.py library and youtube-dl to download the audio from youtube.
 
 Code in this repo requires .env file with the following variables:
 ```
@@ -55,9 +55,8 @@ volume (number): Percentage value between 1 and 100
 ```
 
 TODO:
+- Update logging: can not read from file with ```cat``` once it's too long
 - Add 'random' command group
 - Save last used commands and allow to repeat them
 - Add !run_tests command
-- Improve spotify search, add button controls
-- Do YT search (with youtube-search-python?) first, then get AudioSource with ytdl
 - Add pagination and button control to embed queue

@@ -45,13 +45,17 @@ Resume if paused.
 Skip the current song.
 11. /stop | !stop
 Stop and empty the queue.
-12. /queue | !queue
+12. /restart | !restart
+Save the queue and restart the player
+13. /queue | !queue
 Show a queue of upcoming songs.
-13. /shuffle | !shuffle
+14. /shuffle | !shuffle
 Shuffle the queue.
-14. /change_volume | !change_volume
+15. /change_volume | !change_volume
 Change the player volume.
 volume (number): Percentage value between 1 and 100
+16. /status | !status
+Prints some status information
 ```
 
 TODO:

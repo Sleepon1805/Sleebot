@@ -25,7 +25,7 @@ class Music(commands.Cog):
 
     @staticmethod
     def get_voice_client(ctx: commands.Context) -> discord.VoiceClient | None:
-        return ctx.guild.voice_client
+        return ctx.voice_client
 
     def get_player(self, ctx: commands.Context) -> MusicPlayer:
         """
@@ -321,3 +321,25 @@ class Music(commands.Cog):
 
             player.volume = volume / 100
             await response(ctx, f'**`{ctx.author}`**: Set the volume to **{volume}%**')
+
+    @commands.hybrid_command()
+    async def status(
+        self,
+        ctx: commands.Context
+    ):
+        """
+        Prints some status information
+        Args:
+            ctx: discord ctx object
+        """
+        msg = ''
+        msg += f"Current guild is {ctx.guild}\n"
+        msg += f"Current channel is {ctx.channel}\n"
+        msg += f"Current voice client is {ctx.voice_client}\n"
+
+        player = self.get_player(ctx)
+        if player:
+            msg += f"Current player is {player}\n"
+            msg += f"Current queue is {[item.title for item in player.get_queue_items()]}\n"
+
+        await response(ctx, msg)

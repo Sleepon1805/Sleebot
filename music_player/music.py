@@ -337,9 +337,9 @@ class Music(commands.Cog):
         msg += f"Current channel is {ctx.channel}\n"
         msg += f"Current voice client is {ctx.voice_client}\n"
 
-        player = self.get_player(ctx)
+        player = self.players[ctx.guild.id] if ctx.guild.id in self.players else None
+        msg += f"Current player is {player}\n"
         if player:
-            msg += f"Current player is {player}\n"
             msg += f"Current queue is {[item.title for item in player.get_queue_items()]}\n"
 
         await response(ctx, msg)

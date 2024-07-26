@@ -119,10 +119,11 @@ class MusicPlayer:
         shuffle(self.queue._queue)
 
     async def update_embed(self):
+        curr_channel = self.vc.channel if hasattr(self.vc, 'channel') else None
         await self.embed.update(
             self.current,
             self.get_queue_items(),
-            self.vc.channel
+            curr_channel
         )
 
     async def send_new_embed_msg(self, ctx: commands.Context):

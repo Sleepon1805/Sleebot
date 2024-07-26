@@ -20,7 +20,7 @@ class PlayerEmbed:
         # Now playing
         if current:
             current_str = self.track_to_str(current)
-            channel_playing = ' in ' + channel.name if channel else ''
+            channel_playing = f' in `{channel.name}`' if channel else ''
             embed = discord.Embed(
                 title=f'Now Playing' + channel_playing,
                 description=f'{current_str}\n [{current.url}]',

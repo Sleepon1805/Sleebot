@@ -71,10 +71,11 @@ class Track:
         query = query.replace(':', '')
         to_run = partial(ytdl.extract_info, url=query, download=False, process=False)
         data = await loop.run_in_executor(None, to_run)
-        data = data['entries'][0]  # text search gives playlist with one entry out
+        if 'entries' in data:
+            data = data['entries'][0]  # text search gives playlist with one entry out
         track = cls(
-            title=data['title'],
-            duration=data['duration'],
+            title=data['title'] if 'title' in data else data['url'],
+            duration=data['duration'] if 'title' in data else None,
             requester=requester,
             artist=data['artist'] if 'artist' in data else None,
             url=None,

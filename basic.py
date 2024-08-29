@@ -1,5 +1,6 @@
 import discord
 from discord.ext import commands, tasks
+import random
 
 from utils import response, edit, send
 
@@ -85,6 +86,32 @@ class Basic(commands.Cog):
 
         await timer_loop.start()
         await edit(message, content=f"{event_name} has started!" if event_name else "Timer has ended")
+
+    @commands.hybrid_command()
+    async def choose(
+        self,
+        ctx: commands.Context,
+        options: str,
+        separator: str = None,
+    ):
+        """
+        Start a timer
+        Args:
+            ctx: discord ctx object
+            options: List of options to choose from, by default separated by " " or ", "
+            separator: Separator to split the options
+        """
+        if separator:
+            options = options.split(separator)
+        elif ", " in options:
+            options = options.split(", ")
+        elif " " in options:
+            options = options.split(" ")
+        else:
+            options = [options]
+
+        assert len(options) > 0, "Need at least one option to choose from"
+        await response(ctx, f"Out of all possible options, I think `{random.choice(options)}` is the best!")
 
     @discord.app_commands.command(name='help')
     async def help_msg(self, interaction: discord.Interaction):
